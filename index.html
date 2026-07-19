@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>Kartomat</title>
-  <meta name="build-version" content="1dab8c04839c">
+  <meta name="build-version" content="4fc45ebd2fec">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -715,6 +715,50 @@
       letter-spacing: .1em;
       cursor: pointer;
     }
+
+    /* ── Install banner ── */
+
+    #installBanner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 999;
+      background: var(--surface);
+      border-bottom: 1px solid var(--divider);
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    #installBanner[hidden] { display: none; }
+    #installBanner span { flex: 1; }
+    #installBtn {
+      flex-shrink: 0;
+      background: #fff;
+      color: #0d0d0d;
+      border: none;
+      border-radius: 3px;
+      padding: 8px 20px;
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      cursor: pointer;
+    }
+    #installDismissBtn {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+    }
   </style>
 
   <script async crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -741,6 +785,13 @@
   <div id="updateBanner" hidden>
     <span>Update verfügbar</span>
     <button id="updateBtn">Aktualisieren</button>
+  </div>
+
+  <!-- ── Install banner ── -->
+  <div id="installBanner" hidden>
+    <span>Kartomat offline verfügbar machen</span>
+    <button id="installBtn">Installieren</button>
+    <button id="installDismissBtn">×</button>
   </div>
 
   <!-- ── Loading ── -->
@@ -841,6 +892,7 @@
       document.getElementById(id).classList.add('active');
       twoTapControl.reset();
       if (id === 'home') renderHomeList();
+      if (id === 'home') _installCtrl.markEngaged();
       if (id === 'gallery') loadGallery();
     }
 
@@ -2141,6 +2193,7 @@
 
       function _show() {
         document.getElementById('updateBanner').removeAttribute('hidden');
+        _installCtrl.notifyUpdatePending();
       }
 
       return {
@@ -2163,6 +2216,114 @@
     })();
 
     document.getElementById('updateBtn').addEventListener('click', () => _updateCtrl.apply());
+
+    // ── Install banner controller ──
+    const _installCtrl = (() => {
+      const LS_DISMISSED  = 'kartomat:install:dismissed';
+      const LS_SUPPRESSED = 'kartomat:install:suppressed';
+      const COOLDOWN_MS   = 30 * 24 * 60 * 60 * 1000;
+
+      let _deferredPrompt = null;
+      let _engaged = false;
+      let _updateIsPending = false;
+
+      function _isStandalone() {
+        return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      }
+
+      function _isSuppressed() {
+        return localStorage.getItem(LS_SUPPRESSED) === '1';
+      }
+
+      function _inCooldown() {
+        const ts = localStorage.getItem(LS_DISMISSED);
+        if (!ts) return false;
+        return Date.now() - parseInt(ts, 10) < COOLDOWN_MS;
+      }
+
+      function _updatePending() {
+        return _updateIsPending;
+      }
+
+      function _isIosSafari() {
+        const ua = navigator.userAgent;
+        const isIos = /iPhone|iPad|iPod/.test(ua) ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (!isIos) return false;
+        return /Safari\//.test(ua) && !/CriOS|FxiOS|OPiOS|EdgiOS|GSA|FBAN|FBAV|Instagram/.test(ua);
+      }
+
+      function _isEligible() {
+        return _engaged && !_isStandalone() && !!_deferredPrompt && !_isSuppressed() && !_inCooldown() && !_updatePending();
+      }
+
+      function _isIosEligible() {
+        return _engaged && _isIosSafari() && !_isStandalone() && !_isSuppressed() && !_inCooldown() && !_updatePending();
+      }
+
+      function _show(mode) {
+        const span = document.querySelector('#installBanner span');
+        const btn = document.getElementById('installBtn');
+        if (mode === 'ios') {
+          span.textContent = 'Offline nutzen: Teilen → Zum Home-Bildschirm';
+          btn.setAttribute('hidden', '');
+        } else {
+          btn.removeAttribute('hidden');
+        }
+        document.getElementById('installBanner').removeAttribute('hidden');
+      }
+
+      function _hide() {
+        document.getElementById('installBanner').setAttribute('hidden', '');
+      }
+
+      function _dismiss() {
+        localStorage.setItem(LS_DISMISSED, String(Date.now()));
+        _hide();
+      }
+
+      function _onInstalled() {
+        localStorage.setItem(LS_SUPPRESSED, '1');
+        _deferredPrompt = null;
+        _hide();
+      }
+
+      return {
+        capture(event) {
+          event.preventDefault();
+          _deferredPrompt = event;
+          if (_isEligible()) _show('chromium');
+        },
+        markEngaged() {
+          _engaged = true;
+          if (_isEligible()) _show('chromium');
+          else if (_isIosEligible()) _show('ios');
+        },
+        async install() {
+          if (!_deferredPrompt) return;
+          const prompt = _deferredPrompt;
+          _deferredPrompt = null;
+          _hide();
+          await prompt.prompt();
+          const { outcome } = await prompt.userChoice;
+          if (outcome === 'accepted') {
+            _onInstalled();
+          } else {
+            _dismiss();
+          }
+        },
+        dismiss: _dismiss,
+        onInstalled: _onInstalled,
+        notifyUpdatePending() { _updateIsPending = true; _hide(); },
+        notifyUpdateResolved() { _updateIsPending = false; if (_isEligible()) _show('chromium'); else if (_isIosEligible()) _show('ios'); }
+      };
+    })();
+
+    document.getElementById('installBtn').addEventListener('click', () => _installCtrl.install());
+    document.getElementById('installDismissBtn').addEventListener('click', () => _installCtrl.dismiss());
+
+    window.addEventListener('beforeinstallprompt', e => _installCtrl.capture(e));
+    window.addEventListener('appinstalled', () => _installCtrl.onInstalled());
 
     // ── Service Worker registration ──
     if ('serviceWorker' in navigator) {
