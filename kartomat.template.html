@@ -2113,6 +2113,21 @@
           const w = reg.installing;
           w.addEventListener('statechange', () => { if (w.state === 'installed') handleWaiting(); });
         });
+
+        // Poll for a new version in the background. reg.update() re-fetches sw.js;
+        // if BUILD_VERSION changed the browser installs it and fires updatefound → banner.
+        // Once an update is already detected (banner shown), stop checking.
+        let _pollId = null;
+        const _updatePending = () => !document.getElementById('updateBanner').hasAttribute('hidden');
+        const _checkForUpdate = () => {
+          if (_updatePending()) { if (_pollId) { clearInterval(_pollId); _pollId = null; } return; }
+          reg.update().catch(() => {});
+        };
+        _pollId = setInterval(_checkForUpdate, 10 * 60 * 1000);
+        // Also check when the tab regains focus, so a long-backgrounded app catches up promptly.
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') _checkForUpdate();
+        });
       });
       let _reloadLock = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
