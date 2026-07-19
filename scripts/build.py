@@ -18,11 +18,11 @@ def content_version():
 
 version = content_version()
 
-# kartomat.html
+# index.html — this is the file GitHub Pages serves as the directory default
 tmpl = open(os.path.join(root, 'kartomat.template.html')).read()
 html = tmpl.replace('{version}', version)
-open(os.path.join(root, 'kartomat.html'), 'w').write(html)
-print(f'kartomat.html built (version={version})')
+open(os.path.join(root, 'index.html'), 'w').write(html)
+print(f'index.html built (version={version})')
 
 # sw.js
 sw_tmpl = open(os.path.join(here, 'sw.template.js')).read()
@@ -30,7 +30,7 @@ sw = sw_tmpl.replace('{version}', version)
 open(os.path.join(root, 'sw.js'), 'w').write(sw)
 print(f'sw.js built (version={version})')
 
-# manifest.json — emit alongside kartomat.html; source is the committed manifest.json
+# manifest.json — emit alongside index.html; source is the committed manifest.json
 manifest_src = os.path.join(root, 'manifest.json')
 if os.path.exists(manifest_src):
     print('manifest.json already present')
@@ -41,7 +41,7 @@ else:
         "theme_color": "#0d0d0d",
         "background_color": "#0d0d0d",
         "display": "standalone",
-        "start_url": "./kartomat.html",
+        "start_url": "./index.html",
         "icons": [
             {"src": "./dist/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
             {"src": "./dist/icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
