@@ -27,6 +27,22 @@ Because it hashes only those sources, editing unrelated files (docs, tooling, ot
 
 Open `index.html` directly in a browser, or visit the deployed GitHub Pages URL — no server needed. Supabase is loaded from CDN; all other features work offline via the service worker.
 
+## Install banner
+
+When Kartomat is opened in a browser that supports installation, a dismissible banner appears at the top of the home screen once the user has reached the home screen (not during the loading screen).
+
+**Chromium (Android/desktop Chrome & Edge):** the banner shows an **Installieren** button. Tapping it triggers the browser's native install prompt (`beforeinstallprompt`). On successful install the banner disappears permanently.
+
+**iOS Safari:** the banner shows manual steps — *Offline nutzen: Teilen → Zum Home-Bildschirm* — because iOS does not support programmatic install. Only the close (×) button is interactive.
+
+**Unsupported browsers** (desktop Firefox, in-app browsers, etc.): no banner is shown.
+
+The banner is suppressed when any of the following hold:
+- The app is already running as an installed PWA (standalone/fullscreen display mode).
+- The user dismissed it within the last 30 days (timestamp stored in `localStorage`).
+- The user previously completed installation (permanent flag in `localStorage`; clearing site data resets this).
+- An app update is pending — the update banner takes priority and the install banner hides until the update is resolved.
+
 ## Configuring via URL / QR
 
 The built `index.html` carries no credentials. Pass the Supabase project URL, anon key, and bucket as query-string parameters when opening the page:
