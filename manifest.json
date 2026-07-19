@@ -4,7 +4,7 @@
   "theme_color": "#0d0d0d",
   "background_color": "#0d0d0d",
   "display": "standalone",
-  "start_url": "./kartomat.html",
+  "start_url": "./index.html",
   "icons": [
     {
       "src": "./dist/icons/icon-192.png",
