@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>Kartomat</title>
-  <meta name="build-version" content="04dd40a6121d">
+  <meta name="build-version" content="78407ef10de1">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -298,6 +298,10 @@
       cursor: text;
     }
 
+    .title-bar.field-error, .text-bar.field-error {
+      box-shadow: inset 0 0 0 3px #e85d4c;
+    }
+
     /* ── Zoom controls ── */
 
     .zoom-row {
@@ -502,6 +506,19 @@
       letter-spacing: .06em;
       text-transform: uppercase;
       color: #9e9e9e;
+    }
+
+    .badge-foreign {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #7b8fa6;
+    }
+
+    .card-row-thumb.foreign {
+      opacity: 0.5;
     }
 
     .btn-action.armed {
@@ -774,6 +791,7 @@
   <div id="cardView" class="screen">
     <header class="gallery-header">
       <button class="btn-action" id="cardViewBackBtn">Zurück</button>
+      <button class="btn-action" id="cardViewDownloadBtn">Herunterladen</button>
     </header>
     <div class="card-view-body">
       <img id="cardViewImg" alt="" />
@@ -854,6 +872,7 @@
       desc: '',
       photo: null,
       currentId: null,
+      cardEvent: null,
       publishedAt: null,
       publishedFingerprint: null,
       dirty: false
@@ -1053,15 +1072,25 @@
     function updatePublishBtn() {
       const btn = document.getElementById('publishBtn');
       if (!btn) return;
-      const ready = !!(state.img && state.title && state.title.trim() && state.desc && state.desc.trim());
+      const titleBar = document.querySelector('.title-bar');
+      const textBar = document.querySelector('.text-bar');
+      const hasTitle = !!(state.title && state.title.trim());
+      const hasDesc = !!(state.desc && state.desc.trim());
+      const ready = !!(state.img && hasTitle && hasDesc);
       if (!ready) {
         btn.disabled = true;
+        btn.textContent = 'Veröffentlichen';
         btn.title = 'Foto, Titel und Beschreibung erforderlich';
         btn.classList.remove('btn-action-primary');
+        titleBar?.classList.toggle('field-error', !hasTitle);
+        textBar?.classList.toggle('field-error', !hasDesc);
         return;
       }
+      titleBar?.classList.remove('field-error');
+      textBar?.classList.remove('field-error');
       const alreadyPublished = state.publishedFingerprint !== null && stateFingerprint() === state.publishedFingerprint;
       btn.disabled = alreadyPublished;
+      btn.textContent = alreadyPublished ? 'Keine Änderungen' : 'Veröffentlichen';
       btn.title = alreadyPublished ? 'Bereits veröffentlicht' : '';
       btn.classList.toggle('btn-action-primary', !alreadyPublished);
     }
@@ -1110,6 +1139,7 @@
           state.desc = '';
           state.photo = dataURL;
           state.currentId = null;
+          state.cardEvent = null;
           state.publishedAt = null;
           state.publishedFingerprint = null;
           zoomSlider.value = 1;
@@ -1467,7 +1497,7 @@
       const STORE   = 'cards';
 
       function open() {
-        const dbName = 'kartomat-' + config.bucket.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        const dbName = 'kartomat';
         return new Promise((resolve, reject) => {
           const req = indexedDB.open(dbName, DB_VER);
           req.onupgradeneeded = e => {
@@ -1557,10 +1587,19 @@
     }
 
     async function persistCard(fullCanvas) {
-      if (!state.currentId) state.currentId = crypto.randomUUID();
+      const isForeign = state.cardEvent !== null && state.cardEvent !== config.event;
+      if (isForeign) {
+        state.currentId = crypto.randomUUID();
+        state.cardEvent = config.event;
+        state.publishedAt = null;
+        state.publishedFingerprint = null;
+      } else if (!state.currentId) {
+        state.currentId = crypto.randomUUID();
+      }
       const thumbnail = await buildThumbnail(fullCanvas);
       await cardStore.put({
         id:          state.currentId,
+        event:       config.event,
         title:       state.title,
         desc:        state.desc,
         photo:       state.photo,
@@ -1588,9 +1627,6 @@
       const cropped = cropToTrim(canvas);
       const slug    = (state.title || 'karte').toLowerCase().replace(/[^a-z0-9]+/g, '-');
       triggerDownload(cropped.toDataURL('image/png'), slug + '.png');
-      await persistCard(canvas);
-      state.dirty = false;
-      showScreen('home');
     }
 
     // ── Home list ──
@@ -1605,6 +1641,9 @@
       let cards;
       try { cards = await cardStore.list(); } catch { cards = []; }
       cards.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+      const ownCards = cards.filter(c => !c.event || c.event === config.event);
+      const foreignCards = cards.filter(c => c.event && c.event !== config.event);
+      const sortedCards = [...ownCards, ...foreignCards];
 
       if (!cards.length) {
         homeEl.classList.remove('has-list');
@@ -1613,34 +1652,38 @@
       }
 
       homeEl.classList.add('has-list');
-      listEl.innerHTML = cards.map(c => {
-        let publishTag = '<span class="badge-draft">Entwurf</span>';
-        if (c.publishedFingerprint) {
-          if (recordFingerprint(c) === c.publishedFingerprint) {
-            publishTag = '<span class="badge-published">Veröffentlicht</span>';
-          } else {
-            publishTag = '<span class="badge-published-stale">Veröffentlicht (alt)</span>';
+      listEl.innerHTML = sortedCards.map(c => {
+        const isForeign = c.event && c.event !== config.event;
+        let badge;
+        if (isForeign) {
+          badge = `<span class="badge-foreign">${escapeHtml(c.event)}</span>`;
+        } else {
+          badge = '<span class="badge-draft">Entwurf</span>';
+          if (c.publishedFingerprint) {
+            if (recordFingerprint(c) === c.publishedFingerprint) {
+              badge = '<span class="badge-published">Veröffentlicht</span>';
+            } else {
+              badge = '<span class="badge-published-stale">Veröffentlicht (alt)</span>';
+            }
           }
         }
         return `
         <div class="card-row">
           <div class="card-row-tap" data-id="${escapeHtml(c.id)}">
-            <img class="card-row-thumb" src="${c.thumbnail || ''}" alt="">
+            <img class="card-row-thumb${isForeign ? ' foreign' : ''}" src="${c.thumbnail || ''}" alt="">
             <div class="card-row-body">
               <div class="card-row-title">${escapeHtml(c.title || 'Unbenannt')}</div>
-              <div class="card-row-meta">${publishTag}</div>
+              <div class="card-row-meta">${badge}</div>
             </div>
             <span class="card-row-load-hint">Laden</span>
           </div>
-          <button class="card-row-delete-btn" type="button" data-id="${escapeHtml(c.id)}" data-online="${c.publishedAt ? '1' : '0'}">🗑</button>
+          <button class="card-row-delete-btn" type="button" data-id="${escapeHtml(c.id)}" data-online="${c.publishedAt ? '1' : '0'}" data-foreign="${isForeign ? '1' : '0'}">🗑</button>
         </div>
       `;
       }).join('');
 
       listEl.querySelectorAll('.card-row-tap').forEach(el => {
-        el.addEventListener('click', () => {
-          twoTapControl.tap(el, null, () => loadCardIntoEditor(el.dataset.id));
-        });
+        el.addEventListener('click', () => loadCardIntoEditor(el.dataset.id));
       });
 
       listEl.querySelectorAll('.card-row-delete-btn').forEach(btn => {
@@ -1648,8 +1691,9 @@
           e.stopPropagation();
           twoTapControl.tap(btn, 'Bestätigen', async () => {
             const id = btn.dataset.id;
+            const isForeign = btn.dataset.foreign === '1';
             const record = await cardStore.get(id);
-            if (record && record.publishedAt) {
+            if (!isForeign && record && record.publishedAt) {
               try {
                 await deleteCardOnline(id);
               } catch (err) {
@@ -1686,6 +1730,7 @@
       state.offsetYFrac = record.offsetYFrac ?? null;
       state.publishedAt          = record.publishedAt          ?? null;
       state.publishedFingerprint = record.publishedFingerprint ?? null;
+      state.cardEvent            = record.event                ?? null;
 
       if (previewImgEl) { previewImgEl.remove(); previewImgEl = null; }
 
@@ -1795,6 +1840,7 @@
     let _galleryObjectUrls = [];
     let _galleryObserver = null;
     let _cardViewObjectUrl = null;
+    let _cardViewUuid = null;
 
     function revokeGalleryUrls() {
       if (_galleryObserver) { _galleryObserver.disconnect(); _galleryObserver = null; }
@@ -1804,6 +1850,7 @@
 
     function revokeCardViewUrl() {
       if (_cardViewObjectUrl) { URL.revokeObjectURL(_cardViewObjectUrl); _cardViewObjectUrl = null; }
+      _cardViewUuid = null;
     }
 
     async function loadGallery() {
@@ -1879,6 +1926,7 @@
       const { data, error } = await client.storage.from(_runtimeConfig.bucket).download(key);
       if (error || !data) return;
       _cardViewObjectUrl = URL.createObjectURL(data);
+      _cardViewUuid = uuid;
       img.src = _cardViewObjectUrl;
     }
 
@@ -1892,6 +1940,9 @@
     document.getElementById('galleryBtn').addEventListener('click', () => showScreen('gallery'));
     document.getElementById('galleryBackBtn').addEventListener('click', () => showScreen('home'));
     document.getElementById('cardViewBackBtn').addEventListener('click', () => showScreen('gallery'));
+    document.getElementById('cardViewDownloadBtn').addEventListener('click', () => {
+      if (_cardViewObjectUrl && _cardViewUuid) triggerDownload(_cardViewObjectUrl, 'kartomat-' + _cardViewUuid + '.jpeg');
+    });
 
     createBtn.addEventListener('click', openPhotoSource);
     changePhotoBtn.addEventListener('click', openPhotoSource);
@@ -1908,7 +1959,15 @@
     photoChooser.addEventListener('click', (e) => {
       if (e.target === photoChooser) closeChooser();
     });
-    document.getElementById('saveBtn').addEventListener('click', saveCard);
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      const isForeign = state.cardEvent !== null && state.cardEvent !== config.event;
+      const needsConfirm = state.currentId !== null && !isForeign;
+      if (needsConfirm) {
+        twoTapControl.tap(document.getElementById('saveBtn'), 'Wirklich?', saveCard);
+      } else {
+        saveCard();
+      }
+    });
     document.getElementById('downloadBtn').addEventListener('click', downloadCard);
     document.getElementById('publishBtn').addEventListener('click', () => {
       twoTapControl.tap(document.getElementById('publishBtn'), 'Bestätigen', publishCard);

@@ -36,14 +36,18 @@ The built `index.html` carries no credentials. Pass the Supabase project URL, an
 | `url` | Supabase project URL, e.g. `https://<project>.supabase.co` |
 | `key` | Supabase anon key |
 | `bucket` | Storage bucket name |
+| `event` | Unique event identifier; cards created here are owned by this event. Cards from other events remain accessible but are shown as foreign. |
+| `tagline` | Optional tagline shown on the home screen. Defaults to a generic festival-card blurb. |
+
+`url`, `key`, and `bucket` must appear together in one link; omitting any triggers a configuration error. `event` and `tagline` fall back to built-in defaults if omitted but should be set per event.
 
 **Example link:**
 
 ```
-https://<user>.github.io/<repo>/?url=https://<project>.supabase.co&key=<anon key>&bucket=<bucket>
+https://<user>.github.io/<repo>/?url=https://<project>.supabase.co&key=<anon key>&bucket=<bucket>&event=<event-id>
 ```
 
-(Opening a local file works too: `index.html?url=…&key=…&bucket=…`.)
+(Opening a local file works too: `index.html?url=…&key=…&bucket=…&event=….`)
 
 **QR codes:** Encode the full link above with any QR generator. The anon JWT is long (~200+ characters), so the resulting QR code is dense — use an adequate print size (≥ 4 cm) and a high error-correction level (Q or H) to ensure reliable scanning.
 
@@ -51,10 +55,12 @@ https://<user>.github.io/<repo>/?url=https://<project>.supabase.co&key=<anon key
 
 ## Flow
 
-**Home screen** — shows the app name, a one-line intention, a secondary **Galerie** button, and the primary **Karte erstellen** button (Galerie is placed above Karte erstellen, in outlined style so creating remains the primary call-to-action). Below the buttons, any previously saved cards appear as thumbnails with title and a publish tag:
+**Home screen** — shows the app name, a one-line intention, a secondary **Galerie** button, and the primary **Karte erstellen** button (Galerie is placed above Karte erstellen, in outlined style so creating remains the primary call-to-action). Below the buttons, cards appear as thumbnails. Own cards (belonging to the current event) are listed first; foreign cards (from other events) appear below. Publish tags apply to own cards:
 - **Veröffentlicht** — card is published and unchanged since publish.
 - **Veröffentlicht (alt)** — card was published but has been edited since.
 - **Entwurf** — card has never been published.
+
+Foreign cards show the originating event name in place of the publish tag, and their thumbnail is shown at 50% opacity.
 
 **Gallery screen** — a full-screen grid of published cards, newest first, fetched from Supabase Storage (up to 200 cards). A **Zurück** button at the top returns to the home screen. The grid has three states:
 - *Wird geladen …* — while thumbnails are being fetched.
@@ -62,7 +68,7 @@ https://<user>.github.io/<repo>/?url=https://<project>.supabase.co&key=<anon key
 - *Galerie nicht verfügbar* — when the list or download fails.
 Only cards published with the new three-file bundle (`.thumb.jpeg` present) appear in the gallery; legacy JSON-only cards are not shown.
 
-**Card view screen** — a read-only full-screen view of a single published card, opened by tapping a gallery thumbnail. Shows the full-size published preview image. A **Zurück** button returns to the gallery. No editing or re-publishing from this screen.
+**Card view screen** — a read-only full-screen view of a single published card, opened by tapping a gallery thumbnail. Shows the full-size published preview image. A **Herunterladen** button downloads the full-size JPEG (reusing the already-fetched blob — no extra network request; saved as `kartomat-<uuid>.jpeg`). A **Zurück** button returns to the gallery. No editing or re-publishing from this screen.
 
 **Starting a card** — on mobile, tapping **Karte erstellen** shows a chooser (Kamera / Galerie). On desktop, the file picker opens directly. After photo selection the editor opens immediately.
 
@@ -74,11 +80,12 @@ Only cards published with the new three-file bundle (`.thumb.jpeg` present) appe
 - **Zurück** — navigates to the home screen immediately when there are no unsaved changes; requires a two-tap "Änderungen verwerfen?" confirm when there are.
 - Bottom action bar — 2-column grid: **Speichern** + **Herunterladen** side-by-side on row 1; **Veröffentlichen** full-width on row 2.
 
-**Two-tap confirm** — Veröffentlichen uses a two-tap pattern: first tap arms (relabels to "Bestätigen"); second tap commits. Tapping elsewhere resets the armed state. Zurück also uses this pattern when there are unsaved changes (relabels to "Änderungen verwerfen?"). Speichern and Herunterladen are single-tap.
+**Two-tap confirm** — Veröffentlichen uses a two-tap pattern: first tap arms (relabels to "Bestätigen"); second tap commits. Tapping elsewhere resets the armed state. Zurück also uses this pattern when there are unsaved changes (relabels to "Änderungen verwerfen?"). Speichern is two-tap (relabels to "Wirklich?") only when overwriting an already-saved own card; a new card or a foreign-card fork is single-tap. Herunterladen is always single-tap.
 
-**Delete flow** — The trash button (🗑) on each home-list card branches on publish state:
-- **Unpublished card** — single "delete locally" confirmation banner, then removes the local record.
-- **Published card** — reveals two choices: **Lokal** and **Online**.
+**Delete flow** — The trash button (🗑) on each home-list card branches on ownership and publish state:
+- **Foreign card** — single "delete locally" confirmation banner, then removes the local record only; the original in its own event's cloud storage is untouched.
+- **Own unpublished card** — single "delete locally" confirmation banner, then removes the local record.
+- **Own published card** — reveals two choices: **Lokal** and **Online**.
   - **Online** — confirmation banner, then deletes the three UUID-derived Supabase Storage files first; only removes the local record if the online delete succeeds. If the online delete fails, the card is kept and an error banner invites retry.
   - **Lokal** — warning banner that the online copy can no longer be deleted or modified (it becomes orphaned), then removes only the local record.
 
@@ -91,6 +98,7 @@ Cards are stored in **IndexedDB** (database name `kartomat`) via the `cardStore`
 | Field | Description |
 |---|---|
 | `id` | Stable UUID assigned at first save |
+| `event` | Event identifier stamped at persist time; a card is "foreign" when this differs from the current event |
 | `title`, `desc` | Card text |
 | `photo` | JPEG normalized to ≤ 1110 px height on import |
 | `userScale`, `offsetXFrac`, `offsetYFrac` | Pan/zoom state |
@@ -103,7 +111,7 @@ IndexedDB is used instead of localStorage because a single photo can exceed the 
 
 API: `list()`, `get(id)`, `put(record)`, `remove(id)`, `markPublished(id, fingerprint)`.
 
-**Save/Download** require only a photo. **Publish** additionally requires title and description; the button is disabled with a hint when either is missing. It is also disabled when the current card is already published and unchanged (i.e. `publishedFingerprint` matches the current version), preventing redundant re-publishes.
+**Save** requires only a photo. **Download** is a pure export — it renders and downloads the PNG and leaves the user in the editor; it does not persist the card and does not navigate home. **Publish** additionally requires title and description; empty fields are flagged with a red border. The Publish button is also disabled and relabelled **Keine Änderungen** when the card is already published and unchanged (i.e. `publishedFingerprint` matches the current version), preventing redundant re-publishes.
 
 ## Cloud publish
 
@@ -123,7 +131,7 @@ The thumbnail is written last so a card only becomes visible in the gallery once
 
 ## Bucket assets
 
-The font (`Nove.woff2`) and background image (`background.jpeg`) are fetched at runtime from the bucket's public `assets/` prefix. A full-screen loading screen blocks app entry until both are ready; if either fails, the app shows an error and a Retry button.
+The font (`Nove.woff2`) and background image (`background.jpeg`) are fetched at runtime from the bucket's `assets/` prefix. The bucket is private, so they are requested through the Supabase **authenticated** object endpoint (`/storage/v1/object/authenticated/<bucket>/assets/…`) using the anon key, not a public URL. A full-screen loading screen blocks app entry until both are ready; if either fails, the app shows an error and a Retry button.
 
 **Required layout in the bucket:**
 
@@ -134,12 +142,12 @@ The font (`Nove.woff2`) and background image (`background.jpeg`) are fetched at 
 
 **Upload step (one-time, per bucket):** Use the Supabase dashboard → Storage → your bucket → upload `background.jpeg` and `Nove.woff2` into an `assets/` folder.
 
-**Required policy:** The `assets/` prefix must allow public reads — add a **SELECT** policy for the `anon` role covering `assets/**`. Without it the fetch fails and the app never starts.
+**Required policy:** The `anon` role must be allowed to read the `assets/` prefix — add a **SELECT** policy for `anon` covering `assets/**`. (The bucket itself stays private; the app authenticates each asset request with the anon key.) Without it the fetch fails and the app never starts.
 
 ## Supabase prerequisites
 
 1. The configured bucket (passed via the `bucket` URL parameter) must exist.
-2. Assets uploaded to `assets/` with a public-read SELECT policy — see [Bucket assets](#bucket-assets).
+2. Assets uploaded to `assets/`, with a SELECT policy allowing the `anon` role to read `assets/**` — see [Bucket assets](#bucket-assets).
 3. An RLS **INSERT** policy must allow the `anon` role to write into `front/`. Without it, uploads return 403.
 4. An RLS **SELECT / list** policy must allow the `anon` role to read and list objects in `front/`. Without it, the gallery cannot fetch thumbnails or preview images (`list()` and `download()` return nothing or error).
 5. An RLS **DELETE** policy must allow the `anon` role to delete objects in `front/`. Without it, online card deletion returns 403.
