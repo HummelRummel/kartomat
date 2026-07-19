@@ -1,4 +1,4 @@
-# Kartomat
+# (K)ARTOMAT
 
 Mobile-first tool for creating card **fronts** at the festival. Front-only, upload-only — no backs, no print screen, no cloud browsing.
 
@@ -29,7 +29,7 @@ Open `index.html` directly in a browser, or visit the deployed GitHub Pages URL 
 
 ## Install banner
 
-When Kartomat is opened in a browser that supports installation, a dismissible banner appears at the top of the home screen once the user has reached the home screen (not during the loading screen).
+When (K)ARTOMAT is opened in a browser that supports installation, a dismissible banner appears at the top of the home screen once the user has reached the home screen (not during the loading screen).
 
 **Chromium (Android/desktop Chrome & Edge):** the banner shows an **Installieren** button. Tapping it triggers the browser's native install prompt (`beforeinstallprompt`). On successful install the banner disappears permanently.
 
