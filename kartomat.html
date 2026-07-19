@@ -1,0 +1,2106 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#0d0d0d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="./manifest.json">
+  <title>Kartomat</title>
+  <meta name="build-version" content="1033c1c544fb">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d0d0d;
+      --surface: #1a1a1a;
+      --text:    #ffffff;
+      --muted:   #666;
+      --divider: #222;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Screens ── */
+
+    .screen { display: none; flex-direction: column; min-height: 100dvh; }
+    .screen.active { display: flex; }
+
+    /* ── Home ── */
+
+    #home {
+      align-items: center;
+      justify-content: center;
+      padding: 48px 28px;
+      text-align: center;
+      gap: 0;
+    }
+
+    .slash-accent {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: .18em;
+      color: var(--muted);
+      margin-bottom: 36px;
+      text-transform: uppercase;
+    }
+
+    .app-name {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: clamp(38px, 11vw, 72px);
+      letter-spacing: .03em;
+      line-height: 1;
+      margin-bottom: 20px;
+    }
+
+    .app-tagline {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+      max-width: 300px;
+      margin-bottom: 52px;
+    }
+
+    .btn-primary {
+      background: #fff;
+      color: #0d0d0d;
+      border: none;
+      border-radius: 3px;
+      padding: 15px 44px;
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      cursor: pointer;
+      transition: opacity .12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-primary:active { opacity: .82; }
+
+    /* ── Editor ── */
+
+    #editor {
+      flex-direction: column;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    .editor-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--divider);
+      min-height: 54px;
+      flex-shrink: 0;
+    }
+
+
+    /* ── Photo-source chooser ── */
+
+    .photo-chooser-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 900;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .photo-chooser-sheet {
+      width: 100%;
+      max-width: 480px;
+      background: var(--surface);
+      border-radius: 14px 14px 0 0;
+      padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .photo-chooser-btn {
+      background: #2a2a2a;
+      color: var(--text);
+      border: none;
+      border-radius: 6px;
+      padding: 16px;
+      font-size: 16px;
+      font-family: system-ui, -apple-system, sans-serif;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .1s;
+    }
+    .photo-chooser-btn:active { background: #3a3a3a; }
+
+    .photo-chooser-cancel {
+      background: none;
+      color: var(--muted);
+      border: none;
+      border-radius: 6px;
+      padding: 14px;
+      font-size: 15px;
+      font-family: system-ui, -apple-system, sans-serif;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      margin-top: 4px;
+    }
+    .photo-chooser-cancel:active { color: var(--text); }
+
+    .editor-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 12px 16px;
+      gap: 14px;
+      overflow: hidden;
+    }
+
+    /* ── Card preview ── */
+
+    .card-preview-wrap {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .card-preview {
+      /* trimW=735, trimH=1042 matching cropToTrim (trimInset=34, trimInsetY=34) */
+      aspect-ratio: 735 / 1042;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      position: relative;
+      overflow: hidden;
+      border-radius: calc(58 / 735 * 100%) / calc(58 / 1042 * 100%);
+      box-shadow: 0 4px 32px rgba(0,0,0,.7);
+    }
+
+    .card-full {
+      position: absolute;
+      width: calc(803 / 735 * 100%);
+      height: calc(1110 / 1042 * 100%);
+      left: calc(-34 / 735 * 100%);
+      top: calc(-34 / 1042 * 100%);
+      background-color: #efe9db;
+      background-size: cover;
+      background-position: center;
+      container-type: inline-size;
+    }
+
+    .photo-window {
+      position: absolute;
+      left: calc(59/803 * 100%);
+      top: calc(175/1110 * 100%);
+      width: calc(685/803 * 100%);
+      height: calc(600/1110 * 100%);
+      overflow: hidden;
+      border-radius: calc(15/685 * 100%);
+      background: #d8d2c2;
+      cursor: grab;
+      touch-action: none;
+    }
+    .photo-window::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 2px solid #1b1b1b;
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .photo-window.dragging { cursor: grabbing; }
+    .photo-window img {
+      position: absolute;
+      user-select: none;
+      pointer-events: none;
+      display: block;
+    }
+
+    .title-bar {
+      position: absolute;
+      left: calc(59/803 * 100%);
+      top: calc(65/1110 * 100%);
+      width: calc(685/803 * 100%);
+      height: calc(85/1110 * 100%);
+      background: rgba(180,180,180,0.70);
+      border-radius: calc(15/685 * 100%);
+      box-shadow: inset 0 0 0 2px #1b1b1b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .title-text {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      color: #1b1b1b;
+      text-transform: uppercase;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      width: 90%;
+      text-align: center;
+      outline: none;
+    }
+
+    .text-bar {
+      position: absolute;
+      left: calc(59/803 * 100%);
+      top: calc(805/1110 * 100%);
+      width: calc(685/803 * 100%);
+      height: calc(240/1110 * 100%);
+      background: rgba(180,180,180,0.70);
+      border-radius: calc(15/685 * 100%);
+      box-shadow: inset 0 0 0 2px #1b1b1b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .desc-text {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      color: #1b1b1b;
+      text-transform: uppercase;
+      letter-spacing: .02em;
+      white-space: pre-wrap;
+      word-break: break-word;
+      width: 90%;
+      text-align: center;
+      outline: none;
+    }
+
+    .title-bar.editing, .text-bar.editing {
+      box-shadow: inset 0 0 0 3px rgba(255,255,255,0.55);
+      cursor: text;
+    }
+
+    /* ── Zoom controls ── */
+
+    .zoom-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 420px;
+      flex-shrink: 0;
+    }
+
+    .zoom-icon {
+      color: var(--muted);
+      font-size: 20px;
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    #zoomSlider {
+      flex: 1;
+      accent-color: #fff;
+      cursor: pointer;
+      height: 4px;
+    }
+
+    /* ── Action bar ── */
+
+    .action-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      width: 100%;
+      max-width: 420px;
+      flex-shrink: 0;
+      padding-bottom: 4px;
+    }
+
+    .btn-action {
+      flex: 1;
+      background: none;
+      border: 1px solid var(--divider);
+      color: var(--text);
+      border-radius: 3px;
+      padding: 13px 8px;
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      cursor: pointer;
+      transition: background .12s, border-color .12s;
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+    }
+    .btn-action:active { background: rgba(255,255,255,.07); }
+    .btn-action:disabled { opacity: .3; cursor: default; }
+
+    .btn-action-primary {
+      background: #fff;
+      color: #0d0d0d;
+      border-color: #fff;
+    }
+    .btn-action-primary:active { opacity: .82; background: #fff; }
+
+    .btn-action .btn-spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-right: 8px;
+      vertical-align: -1px;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: btn-spin .6s linear infinite;
+    }
+    @keyframes btn-spin { to { transform: rotate(360deg); } }
+
+    /* ── Home card list ── */
+
+    #home.has-list {
+      justify-content: flex-start;
+      overflow-y: auto;
+      padding: 40px 28px 28px;
+    }
+
+    .card-list {
+      width: 100%;
+      max-width: 480px;
+      margin-top: 28px;
+    }
+
+    .card-row {
+      display: flex;
+      align-items: center;
+      border-top: 1px solid var(--divider);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .card-row:last-child { border-bottom: 1px solid var(--divider); }
+
+    .card-row-tap {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 8px 10px 0;
+      cursor: pointer;
+    }
+
+    .card-row-thumb {
+      width: 40px;
+      height: 55px;
+      border-radius: 2px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: var(--surface);
+      display: block;
+    }
+
+    .card-row-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .card-row-title {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-row-meta { min-height: 14px; margin-top: 3px; }
+
+    .card-row-load-hint {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: transparent;
+      flex-shrink: 0;
+      user-select: none;
+      pointer-events: none;
+    }
+    .card-row-tap.armed .card-row-load-hint { color: var(--text); }
+    .card-row-load-hint.delete-hint { color: #e85d4c; }
+
+    .card-row-delete-btn {
+      background: none;
+      border: 1px solid transparent;
+      color: var(--muted);
+      font-size: 16px;
+      padding: 10px 8px;
+      cursor: pointer;
+      border-radius: 3px;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+      line-height: 1;
+    }
+    .card-row-delete-btn.armed {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #e85d4c;
+      border-color: #e85d4c;
+      padding: 10px 8px;
+    }
+
+    .badge-published {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #2a9d8f;
+    }
+
+    .badge-published-stale {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #b08a3e;
+    }
+
+    .badge-draft {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #9e9e9e;
+    }
+
+    .btn-action.armed {
+      border-color: var(--muted);
+    }
+
+    /* ── Home CTA stack ── */
+
+    .home-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      width: 220px;
+    }
+
+    /* ── Gallery screen ── */
+
+    #gallery {
+      flex-direction: column;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    .gallery-header {
+      display: flex;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--divider);
+      min-height: 54px;
+      flex-shrink: 0;
+    }
+
+    .gallery-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 4px;
+    }
+
+    .gallery-state {
+      text-align: center;
+      color: var(--muted);
+      padding: 60px 20px;
+      font-size: 15px;
+    }
+
+    .gallery-state:empty {
+      display: none;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+      gap: 8px;
+    }
+
+    .gallery-tile {
+      aspect-ratio: 735 / 1042;
+      background: var(--surface);
+      overflow: hidden;
+      border-radius: 2px;
+    }
+
+    .gallery-tile img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ── Card View screen ── */
+
+    #cardView {
+      flex-direction: column;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    .card-view-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 8px;
+    }
+
+    #cardViewImg {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+
+    /* ── Not configured ── */
+
+    #nocfg {
+      align-items: center;
+      justify-content: center;
+      padding: 48px 28px;
+      text-align: center;
+    }
+
+    .nocfg-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      max-width: 360px;
+    }
+
+    .nocfg-main {
+      color: var(--text);
+      font-size: 1.05rem;
+      line-height: 1.5;
+    }
+
+    .nocfg-error {
+      color: #f87171;
+      font-size: 0.9rem;
+      min-height: 1.2em;
+    }
+
+    .nocfg-hint {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    /* ── Loading ── */
+
+    #loading {
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .loading-spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--divider);
+      border-top-color: var(--text);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-error-msg {
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 24px;
+      text-align: center;
+      max-width: 300px;
+      line-height: 1.5;
+    }
+
+    /* ── Update banner ── */
+
+    #updateBanner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 999;
+      background: var(--surface);
+      border-bottom: 1px solid var(--divider);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    #updateBanner[hidden] { display: none; }
+    #updateBanner button {
+      flex-shrink: 0;
+      background: #fff;
+      color: #0d0d0d;
+      border: none;
+      border-radius: 3px;
+      padding: 8px 20px;
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      cursor: pointer;
+    }
+  </style>
+
+  <script async crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+
+  <!-- Two hidden file inputs: camera (capture) and library (plain) -->
+  <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+  <input type="file" id="libraryInput" accept="image/*" style="display:none">
+
+  <!-- Photo-source chooser (shown on touch/mobile only) -->
+  <div id="photoChooser" class="photo-chooser-overlay" style="display:none" role="dialog" aria-modal="true">
+    <div class="photo-chooser-sheet">
+      <button class="photo-chooser-btn" id="chooserCameraBtn">Kamera</button>
+      <button class="photo-chooser-btn" id="chooserGalerieBtn">Galerie</button>
+      <button class="photo-chooser-cancel" id="chooserCancelBtn">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- Hidden export canvas at full card resolution -->
+  <canvas id="exportCanvas" width="803" height="1110" style="display:none"></canvas>
+
+  <!-- ── Update banner ── -->
+  <div id="updateBanner" hidden>
+    <span>Update verfügbar</span>
+    <button id="updateBtn">Aktualisieren</button>
+  </div>
+
+  <!-- ── Loading ── -->
+  <div id="loading" class="screen active">
+    <div class="loading-wrap">
+      <div id="loadingSpinner" class="loading-spinner"></div>
+      <div id="loadingError" style="display:none;text-align:center;padding:0 28px">
+        <p id="loadingErrorMsg" class="loading-error-msg">Inhalte konnten nicht geladen werden.</p>
+        <button class="btn-primary" id="loadingRetryBtn">Erneut versuchen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Not configured ── -->
+  <div id="nocfg" class="screen">
+    <div class="nocfg-wrap">
+      <div class="slash-accent">/// Kartomat</div>
+      <p class="nocfg-main">Diese App muss über einen Konfigurations-Link oder QR-Code geöffnet werden.</p>
+      <p id="nocfgMsg" class="nocfg-error"></p>
+      <p class="nocfg-hint">Erwartet: ?url=…&amp;key=…&amp;bucket=…</p>
+    </div>
+  </div>
+
+  <!-- ── Home ── -->
+  <div id="home" class="screen">
+    <div class="slash-accent" id="homeEvent"></div>
+    <h1 class="app-name">Kartomat</h1>
+    <p class="app-tagline" id="homeTagline"></p>
+    <div class="home-actions">
+      <button class="btn-action" id="galleryBtn">Galerie</button>
+      <button class="btn-primary" id="createBtn">Karte erstellen</button>
+    </div>
+    <div id="cardList" class="card-list"></div>
+  </div>
+
+  <!-- ── Gallery ── -->
+  <div id="gallery" class="screen">
+    <header class="gallery-header">
+      <button class="btn-action" id="galleryBackBtn">Zurück</button>
+    </header>
+    <div class="gallery-body">
+      <div id="galleryState" class="gallery-state"></div>
+      <div id="galleryGrid" class="gallery-grid"></div>
+    </div>
+  </div>
+
+  <!-- ── Card View ── -->
+  <div id="cardView" class="screen">
+    <header class="gallery-header">
+      <button class="btn-action" id="cardViewBackBtn">Zurück</button>
+    </header>
+    <div class="card-view-body">
+      <img id="cardViewImg" alt="" />
+    </div>
+  </div>
+
+  <!-- ── Editor ── -->
+  <div id="editor" class="screen">
+    <header class="editor-header">
+      <button class="btn-action" id="backBtn">Zurück</button>
+      <button class="btn-action" id="changePhotoBtn">Foto ändern</button>
+    </header>
+    <div class="editor-body">
+      <div class="card-preview-wrap">
+        <div class="card-preview" id="cardPreview">
+          <div class="card-full" id="cardFull">
+            <div class="photo-window" id="photoWindow"></div>
+            <div class="title-bar">
+              <span class="title-text" id="titleText">TITEL</span>
+            </div>
+            <div class="text-bar">
+              <span class="desc-text" id="descText">BESCHREIBUNG</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="zoom-row">
+        <span class="zoom-icon">−</span>
+        <input type="range" id="zoomSlider" min="1" max="4" step="0.01" value="1">
+        <span class="zoom-icon">+</span>
+      </div>
+      <div class="action-bar">
+        <button class="btn-action" id="saveBtn">Speichern</button>
+        <button class="btn-action" id="downloadBtn">Herunterladen</button>
+        <button class="btn-action" id="publishBtn" style="grid-column: 1 / -1" disabled title="Foto, Titel und Beschreibung erforderlich">Veröffentlichen</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Screen router ──
+
+    function showScreen(id) {
+      if (id !== 'gallery') revokeGalleryUrls();
+      if (id !== 'cardView') revokeCardViewUrl();
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      twoTapControl.reset();
+      if (id === 'home') renderHomeList();
+      if (id === 'gallery') loadGallery();
+    }
+
+    // ── Geometry constants (verbatim from hummelrummel-card-creator.html) ──
+
+    const CARD_W = 803, CARD_H = 1110;
+    const SAFE_X = 81;  // 7 mm × (803/69) px/mm
+    const TRIM_R = 58;  // 5 mm trim corner radius in px
+    const LAYOUT = {
+      title: { left: 59/CARD_W, top:  65/CARD_H, width: 685/CARD_W, height:  85/CARD_H },
+      photo: { left: 59/CARD_W, top: 175/CARD_H, width: 685/CARD_W, height: 600/CARD_H },
+      text:  { left: 59/CARD_W, top: 805/CARD_H, width: 685/CARD_W, height: 240/CARD_H }
+    };
+    const CANVAS_MAX_FONT = { title: 55, desc: 40 };
+
+    const bgImg = new Image();
+    let _bgObjectUrl = null;
+
+    // ── Editor state ──
+
+    const state = {
+      img: null,
+      naturalW: 0,
+      naturalH: 0,
+      userScale: 1,
+      offsetXFrac: null,
+      offsetYFrac: null,
+      title: '',
+      desc: '',
+      photo: null,
+      currentId: null,
+      publishedAt: null,
+      publishedFingerprint: null,
+      dirty: false
+    };
+
+    // ── Publish-state fingerprint ──
+
+    function simpleHash(str) {
+      let h = 5381;
+      for (let i = 0; i < str.length; i++) {
+        h = ((h << 5) + h) ^ str.charCodeAt(i);
+        h = h >>> 0;
+      }
+      return h.toString(36);
+    }
+
+    function fingerprint(title, desc, photo, userScale, offsetXFrac, offsetYFrac) {
+      const photoHash = photo ? simpleHash(photo) : '';
+      return JSON.stringify({
+        title: title || '', desc: desc || '', photoHash,
+        userScale: userScale ?? 1,
+        offsetXFrac: offsetXFrac ?? null,
+        offsetYFrac: offsetYFrac ?? null
+      });
+    }
+
+    function stateFingerprint() {
+      return fingerprint(state.title, state.desc, state.photo, state.userScale, state.offsetXFrac, state.offsetYFrac);
+    }
+
+    function recordFingerprint(r) {
+      return fingerprint(r.title, r.desc, r.photo, r.userScale, r.offsetXFrac, r.offsetYFrac);
+    }
+
+    // ── DOM refs ──
+
+    const cameraInput    = document.getElementById('cameraInput');
+    const libraryInput   = document.getElementById('libraryInput');
+    const photoChooser   = document.getElementById('photoChooser');
+    const createBtn      = document.getElementById('createBtn');
+    const changePhotoBtn = document.getElementById('changePhotoBtn');
+    const photoWindow    = document.getElementById('photoWindow');
+
+    const isTouchDevice  = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+
+    function openPhotoSource() {
+      if (isTouchDevice) {
+        photoChooser.style.display = 'flex';
+      } else {
+        libraryInput.click();
+      }
+    }
+
+    function closeChooser() {
+      photoChooser.style.display = 'none';
+    }
+    const zoomSlider     = document.getElementById('zoomSlider');
+
+    let previewImgEl = null;
+
+    // ── Two-tap control ──
+
+    const twoTapControl = (() => {
+      let _armed = null;
+      let _original = null;
+      let _onDisarm = null;
+
+      function _reset() {
+        if (!_armed) return;
+        _armed.classList.remove('armed');
+        if (_original !== null) _armed.textContent = _original;
+        const disarm = _onDisarm;
+        _armed = null;
+        _original = null;
+        _onDisarm = null;
+        if (disarm) disarm();
+      }
+
+      document.addEventListener('click', e => {
+        if (_armed && !_armed.contains(e.target)) _reset();
+      });
+
+      return {
+        tap(el, armedLabel, commitFn, onArm) {
+          if (_armed === el) {
+            _reset();
+            commitFn();
+          } else {
+            _reset();
+            _armed = el;
+            _original = armedLabel != null ? el.textContent : null;
+            el.classList.add('armed');
+            if (armedLabel != null) el.textContent = armedLabel;
+            if (onArm) _onDisarm = onArm() || null;
+          }
+        },
+        reset: _reset
+      };
+    })();
+
+    // ── Supabase cloud publish ──
+
+    let _runtimeConfig = null;
+    let _supaClient = null;
+
+    function getSupabaseClient() {
+      if (_supaClient) return _supaClient;
+      if (!_runtimeConfig) return null;
+      if (typeof window.supabase === 'undefined' || typeof window.supabase.createClient !== 'function') return null;
+      _supaClient = window.supabase.createClient(_runtimeConfig.url, _runtimeConfig.key);
+      return _supaClient;
+    }
+
+    function cloudKey(uuid) {
+      return `front/kartomat-${uuid}.json`;
+    }
+
+    async function buildFrontBundle() {
+      const canvas = await renderFrontToCanvas({ showTrimLine: false });
+      const referenceJpeg = cropToTrim(canvas).toDataURL('image/jpeg', 0.9);
+      return {
+        version: 1, side: 'front', title: state.title, desc: state.desc,
+        userScale: state.userScale, offsetXFrac: state.offsetXFrac, offsetYFrac: state.offsetYFrac,
+        photo: state.img ? state.img.src : null,
+        referenceJpeg
+      };
+    }
+
+    async function publishCard() {
+      const client = getSupabaseClient();
+      if (!client) {
+        alert('Cloud nicht verfügbar. Bitte später nochmal versuchen.');
+        return;
+      }
+      const btn = document.getElementById('publishBtn');
+      const btnLabel = btn ? btn.textContent : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-spinner"></span>Wird veröffentlicht…';
+      }
+      try {
+        if (!state.currentId) state.currentId = crypto.randomUUID();
+        const canvas = await renderFrontToCanvas({ showTrimLine: false });
+        await persistCard(canvas);
+        const bundle = await buildFrontBundle();
+        const uuid = state.currentId;
+        const bucket = _runtimeConfig.bucket;
+
+        const { error: jsonErr } = await client.storage
+          .from(bucket)
+          .upload(cloudKey(uuid), new Blob([JSON.stringify(bundle)], { type: 'application/json' }),
+                  { contentType: 'application/json', upsert: true });
+        if (jsonErr) throw jsonErr;
+
+        const previewBlob = await fetch(bundle.referenceJpeg).then(r => r.blob());
+        const { error: previewErr } = await client.storage
+          .from(bucket)
+          .upload(`front/kartomat-${uuid}.jpeg`, previewBlob,
+                  { contentType: 'image/jpeg', upsert: true });
+        if (previewErr) throw previewErr;
+
+        const thumbBlob = await fetch(await buildThumbnail(canvas)).then(r => r.blob());
+        const { error: thumbErr } = await client.storage
+          .from(bucket)
+          .upload(`front/kartomat-${uuid}.thumb.jpeg`, thumbBlob,
+                  { contentType: 'image/jpeg', upsert: true });
+        if (thumbErr) throw thumbErr;
+
+        const fp = stateFingerprint();
+        await cardStore.markPublished(state.currentId, fp);
+        state.publishedFingerprint = fp;
+        state.publishedAt = new Date().toISOString();
+        showScreen('home');
+      } catch (err) {
+        alert('Fehler beim Hochladen: ' + (err.message || err));
+      } finally {
+        if (btn) {
+          btn.textContent = btnLabel;
+          updatePublishBtn();
+        }
+      }
+    }
+
+    async function deleteCardOnline(uuid) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      const bucket = _runtimeConfig.bucket;
+      const paths = [
+        `front/kartomat-${uuid}.json`,
+        `front/kartomat-${uuid}.jpeg`,
+        `front/kartomat-${uuid}.thumb.jpeg`,
+      ];
+      const { error } = await client.storage.from(bucket).remove(paths);
+      if (error) throw error;
+    }
+
+    function updatePublishBtn() {
+      const btn = document.getElementById('publishBtn');
+      if (!btn) return;
+      const ready = !!(state.img && state.title && state.title.trim() && state.desc && state.desc.trim());
+      if (!ready) {
+        btn.disabled = true;
+        btn.title = 'Foto, Titel und Beschreibung erforderlich';
+        btn.classList.remove('btn-action-primary');
+        return;
+      }
+      const alreadyPublished = state.publishedFingerprint !== null && stateFingerprint() === state.publishedFingerprint;
+      btn.disabled = alreadyPublished;
+      btn.title = alreadyPublished ? 'Bereits veröffentlicht' : '';
+      btn.classList.toggle('btn-action-primary', !alreadyPublished);
+    }
+
+    // ── Image normalization ──
+
+    function normalizeImageToJpeg(sourceDataURL, maxHeight, quality) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.naturalWidth;
+          let h = img.naturalHeight;
+          if (h > maxHeight) {
+            const scale = maxHeight / h;
+            w = Math.round(w * scale);
+            h = maxHeight;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = sourceDataURL;
+      });
+    }
+
+    // ── File loading ──
+
+    function handleFileChange(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      e.target.value = '';
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const dataURL = await normalizeImageToJpeg(ev.target.result, 1110, 0.9);
+        const img = new Image();
+        img.onload = () => {
+          state.img = img;
+          state.naturalW = img.naturalWidth;
+          state.naturalH = img.naturalHeight;
+          state.userScale = 1;
+          state.offsetXFrac = null;
+          state.offsetYFrac = null;
+          state.title = '';
+          state.desc = '';
+          state.photo = dataURL;
+          state.currentId = null;
+          state.publishedAt = null;
+          state.publishedFingerprint = null;
+          zoomSlider.value = 1;
+          if (previewImgEl) previewImgEl.remove();
+          previewImgEl = document.createElement('img');
+          previewImgEl.src = dataURL;
+          previewImgEl.draggable = false;
+          photoWindow.appendChild(previewImgEl);
+          state.dirty = true;
+          showScreen('editor');
+          updatePublishBtn();
+          requestAnimationFrame(() => requestAnimationFrame(async () => {
+            layoutPreviewImage();
+            await document.fonts.ready;
+            fitTitleText();
+            fitDescText();
+          }));
+        };
+        img.src = dataURL;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    cameraInput.addEventListener('change', handleFileChange);
+    libraryInput.addEventListener('change', handleFileChange);
+
+    // ── Preview layout ──
+
+    function getFitScale(windowW, windowH) {
+      return Math.max(windowW / state.naturalW, windowH / state.naturalH);
+    }
+
+    function clampPos(x, y, windowW, windowH, drawnW, drawnH) {
+      return {
+        x: Math.max(Math.min(0, windowW - drawnW), Math.min(0, x)),
+        y: Math.max(Math.min(0, windowH - drawnH), Math.min(0, y))
+      };
+    }
+
+    function layoutPreviewImage() {
+      if (!state.img || !previewImgEl) return;
+      const rect = photoWindow.getBoundingClientRect();
+      const windowW = rect.width, windowH = rect.height;
+      if (windowW === 0 || windowH === 0) return;
+
+      const scale = getFitScale(windowW, windowH) * state.userScale;
+      const drawnW = state.naturalW * scale;
+      const drawnH = state.naturalH * scale;
+
+      if (state.offsetXFrac === null || state.offsetYFrac === null) {
+        state.offsetXFrac = (windowW - drawnW) / 2 / windowW;
+        state.offsetYFrac = (windowH - drawnH) / 2 / windowH;
+      }
+      const clamped = clampPos(state.offsetXFrac * windowW, state.offsetYFrac * windowH, windowW, windowH, drawnW, drawnH);
+      state.offsetXFrac = clamped.x / windowW;
+      state.offsetYFrac = clamped.y / windowH;
+
+      previewImgEl.style.width  = drawnW + 'px';
+      previewImgEl.style.height = drawnH + 'px';
+      previewImgEl.style.left   = clamped.x + 'px';
+      previewImgEl.style.top    = clamped.y + 'px';
+    }
+
+    window.addEventListener('resize', () => {
+      layoutPreviewImage();
+      fitTitleText();
+      fitDescText();
+    });
+
+    // ── Zoom slider ──
+
+    zoomSlider.addEventListener('input', () => { state.dirty = true; setZoom(parseFloat(zoomSlider.value)); updatePublishBtn(); });
+
+    function setZoom(newScale) {
+      if (!state.img) { state.userScale = newScale; return; }
+      const rect = photoWindow.getBoundingClientRect();
+      const windowW = rect.width, windowH = rect.height;
+      const oldTotalScale = getFitScale(windowW, windowH) * state.userScale;
+      const posXOld = (state.offsetXFrac ?? 0) * windowW;
+      const posYOld = (state.offsetYFrac ?? 0) * windowH;
+      const cx = windowW / 2, cy = windowH / 2;
+      const relX = (cx - posXOld) / (state.naturalW * oldTotalScale);
+      const relY = (cy - posYOld) / (state.naturalH * oldTotalScale);
+
+      state.userScale = newScale;
+      const newTotalScale = getFitScale(windowW, windowH) * newScale;
+      const newDrawnW = state.naturalW * newTotalScale;
+      const newDrawnH = state.naturalH * newTotalScale;
+      const clamped = clampPos(cx - relX * newDrawnW, cy - relY * newDrawnH, windowW, windowH, newDrawnW, newDrawnH);
+      state.offsetXFrac = clamped.x / windowW;
+      state.offsetYFrac = clamped.y / windowH;
+      layoutPreviewImage();
+    }
+
+    // ── Drag & pinch (pointer events) ──
+
+    let dragging = false;
+    let dragStart = {x: 0, y: 0};
+    let offsetStart = {x: 0, y: 0};
+    const activePointers = new Map();
+    let pinchStart = null;
+
+    photoWindow.addEventListener('pointerdown', (e) => {
+      if (!state.img) return;
+      e.preventDefault();
+      activePointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+
+      if (activePointers.size === 1) {
+        dragging = true;
+        photoWindow.classList.add('dragging');
+        photoWindow.setPointerCapture(e.pointerId);
+        dragStart = {x: e.clientX, y: e.clientY};
+        offsetStart = {x: state.offsetXFrac ?? 0, y: state.offsetYFrac ?? 0};
+        pinchStart = null;
+      } else if (activePointers.size === 2) {
+        dragging = false;
+        photoWindow.classList.remove('dragging');
+        const pts = [...activePointers.values()];
+        const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+        pinchStart = { dist: Math.hypot(dx, dy), scale: state.userScale };
+      }
+    });
+
+    photoWindow.addEventListener('pointermove', (e) => {
+      if (!state.img) return;
+      activePointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+
+      if (activePointers.size === 2 && pinchStart) {
+        const pts = [...activePointers.values()];
+        const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+        const dist = Math.hypot(dx, dy);
+        const newScale = Math.max(1, Math.min(4, pinchStart.scale * dist / pinchStart.dist));
+        state.userScale = newScale;
+        zoomSlider.value = newScale;
+        state.dirty = true;
+        layoutPreviewImage();
+      } else if (dragging && activePointers.size === 1) {
+        const rect = photoWindow.getBoundingClientRect();
+        state.offsetXFrac = offsetStart.x + (e.clientX - dragStart.x) / rect.width;
+        state.offsetYFrac = offsetStart.y + (e.clientY - dragStart.y) / rect.height;
+        state.dirty = true;
+        layoutPreviewImage();
+      }
+    });
+
+    function endPointer(e) {
+      activePointers.delete(e.pointerId);
+      if (activePointers.size < 2) pinchStart = null;
+      if (activePointers.size === 0) {
+        dragging = false;
+        photoWindow.classList.remove('dragging');
+        updatePublishBtn();
+      } else if (activePointers.size === 1) {
+        const [, pt] = [...activePointers.entries()][0];
+        dragging = true;
+        photoWindow.classList.add('dragging');
+        dragStart = {x: pt.x, y: pt.y};
+        offsetStart = {x: state.offsetXFrac ?? 0, y: state.offsetYFrac ?? 0};
+      }
+    }
+
+    photoWindow.addEventListener('pointerup', endPointer);
+    photoWindow.addEventListener('pointercancel', endPointer);
+
+    // ── Canvas helpers (verbatim from hummelrummel-card-creator.html) ──
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function strokeRoundRect(ctx, x, y, w, h, r, lw) {
+      ctx.lineWidth = lw;
+      ctx.strokeStyle = '#1b1b1b';
+      roundRect(ctx, x, y, w, h, r);
+      ctx.stroke();
+    }
+
+    function wrapText(ctx, text, maxWidth) {
+      const paragraphs = text.split('\n');
+      const lines = [];
+      for (const para of paragraphs) {
+        if (!para.trim()) { lines.push(''); continue; }
+        const words = para.split(/\s+/).filter(Boolean);
+        let current = '';
+        for (const word of words) {
+          const test = current ? current + ' ' + word : word;
+          if (ctx.measureText(test).width > maxWidth && current) {
+            lines.push(current);
+            current = word;
+          } else {
+            current = test;
+          }
+        }
+        if (current) lines.push(current);
+      }
+      return lines.length ? lines : [''];
+    }
+
+    function drawCenteredSingleLine(ctx, text, boxX, boxY, boxW, boxH, centerY, maxFont, minFont) {
+      let size = maxFont;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#1b1b1b';
+      while (size > minFont) {
+        ctx.font = `700 ${size}px 'Nove'`;
+        if (ctx.measureText(text).width <= boxW) break;
+        size -= 1;
+      }
+      ctx.font = `700 ${size}px 'Nove'`;
+      ctx.fillText(text, boxX + boxW / 2, centerY);
+    }
+
+    function drawWrappedCentered(ctx, text, boxX, boxY, boxW, boxH, maxFont, minFont) {
+      let size = maxFont, lines = [];
+      const lhRatio = 1.18;
+      while (size >= minFont) {
+        ctx.font = `700 ${size}px 'Nove'`;
+        lines = wrapText(ctx, text, boxW);
+        if (lines.length * size * lhRatio <= boxH) break;
+        size -= 1;
+      }
+      ctx.font = `700 ${size}px 'Nove'`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#1b1b1b';
+      const totalH = lines.length * size * lhRatio;
+      let startY = boxY + (boxH - totalH) / 2 + (size * lhRatio) / 2;
+      lines.forEach((line, i) => ctx.fillText(line, boxX + boxW / 2, startY + i * size * lhRatio));
+    }
+
+    // ── Text-fit helpers (ported from hummelrummel-card-creator.html) ──
+
+    const measureCtx = document.createElement('canvas').getContext('2d');
+
+    function fitTitleText() {
+      const span = document.getElementById('titleText');
+      const bar = span.closest('.title-bar');
+      const text = (state.title || 'TITEL').toUpperCase();
+      const maxW = bar.clientWidth * 0.90;
+      const maxH = bar.clientHeight * 0.80;
+      const containerW = document.getElementById('cardFull').clientWidth;
+      if (containerW === 0 || maxW === 0) return;
+      const maxSize = CANVAS_MAX_FONT.title * containerW / CARD_W;
+      let size = maxSize;
+      while (size > 10) {
+        measureCtx.font = `700 ${size}px 'Nove'`;
+        if (measureCtx.measureText(text).width <= maxW && size <= maxH * 1.05) break;
+        size -= 1;
+      }
+      span.style.fontSize = size + 'px';
+      if (!span.isContentEditable) span.textContent = text;
+    }
+
+    function fitDescText() {
+      const el = document.getElementById('descText');
+      const bar = el.closest('.text-bar');
+      const text = (state.desc || 'BESCHREIBUNG').toUpperCase();
+      const maxW = bar.clientWidth * 0.90;
+      const maxH = bar.clientHeight * 0.85;
+      const containerW = document.getElementById('cardFull').clientWidth;
+      if (containerW === 0 || maxW === 0) return;
+      const maxSize = CANVAS_MAX_FONT.desc * containerW / CARD_W;
+      const lhRatio = 1.15;
+      let size = maxSize;
+      while (size >= 9) {
+        measureCtx.font = `700 ${size}px 'Nove'`;
+        const lines = wrapText(measureCtx, text, maxW);
+        if (lines.length * size * lhRatio <= maxH) break;
+        size -= 1;
+      }
+      el.style.fontSize = size + 'px';
+      el.style.lineHeight = lhRatio.toString();
+      if (!el.isContentEditable) el.textContent = wrapText(measureCtx, text, maxW).join('\n');
+    }
+
+    // ── Export render (adapted from hummelrummel-card-creator.html, front only) ──
+
+    async function renderFrontToCanvas({ showTrimLine = true } = {}) {
+      await document.fonts.ready;
+      const canvas = document.getElementById('exportCanvas');
+      const ctx = canvas.getContext('2d', {colorSpace: 'srgb'});
+
+      ctx.clearRect(0, 0, CARD_W, CARD_H);
+      ctx.drawImage(bgImg, 0, 0, CARD_W, CARD_H);
+
+      const pw = LAYOUT.photo;
+      const winX = pw.left * CARD_W, winY = pw.top * CARD_H;
+      const winW = pw.width * CARD_W, winH = pw.height * CARD_H;
+      ctx.fillStyle = '#d8d2c2';
+      roundRect(ctx, winX, winY, winW, winH, 15); ctx.fill();
+
+      if (state.img) {
+        ctx.save();
+        roundRect(ctx, winX, winY, winW, winH, 15);
+        ctx.clip();
+        const scale = getFitScale(winW, winH) * state.userScale;
+        const drawnW = state.naturalW * scale;
+        const drawnH = state.naturalH * scale;
+        const posX = winX + (state.offsetXFrac ?? ((winW - drawnW) / 2 / winW)) * winW;
+        const posY = winY + (state.offsetYFrac ?? ((winH - drawnH) / 2 / winH)) * winH;
+        ctx.drawImage(state.img, posX, posY, drawnW, drawnH);
+        ctx.restore();
+      }
+      strokeRoundRect(ctx, winX, winY, winW, winH, 15, 5);
+
+      const tb = LAYOUT.title;
+      const tX = tb.left * CARD_W, tY = tb.top * CARD_H;
+      const tW = tb.width * CARD_W, tH = tb.height * CARD_H;
+      ctx.fillStyle = 'rgba(180,180,180,0.70)';
+      roundRect(ctx, tX, tY, tW, tH, 15); ctx.fill();
+      strokeRoundRect(ctx, tX, tY, tW, tH, 15, 5);
+      drawCenteredSingleLine(ctx, state.title || 'TITEL', tX + tW * 0.05, tY, tW * 0.9, tH * 0.8, tY + tH / 2, CANVAS_MAX_FONT.title, 10);
+
+      const xb = LAYOUT.text;
+      const xX = xb.left * CARD_W, xY = xb.top * CARD_H;
+      const xW = xb.width * CARD_W, xH = xb.height * CARD_H;
+      ctx.fillStyle = 'rgba(180,180,180,0.70)';
+      roundRect(ctx, xX, xY, xW, xH, 15); ctx.fill();
+      strokeRoundRect(ctx, xX, xY, xW, xH, 15, 5);
+      drawWrappedCentered(ctx, state.desc || 'BESCHREIBUNG', xX + xW * 0.05, xY + xH * 0.08, xW * 0.9, xH * 0.85, CANVAS_MAX_FONT.desc, 9);
+
+      const trimInset = SAFE_X - Math.round(4 * CARD_W / 69);
+      if (showTrimLine) {
+        const trimInsetY = Math.round(trimInset * CARD_H / CARD_W * (69 / 94));
+        strokeRoundRect(ctx, trimInset, trimInsetY, CARD_W - 2 * trimInset, CARD_H - 2 * trimInsetY, TRIM_R, 3);
+      }
+      return canvas;
+    }
+    window.renderFrontToCanvas = renderFrontToCanvas;
+
+    function cropToTrim(srcCanvas) {
+      const trimInset = SAFE_X - Math.round(4 * CARD_W / 69);
+      const trimInsetY = Math.round(trimInset * CARD_H / CARD_W * (69 / 94));
+      const trimW = CARD_W - 2 * trimInset;
+      const trimH = CARD_H - 2 * trimInsetY;
+      const out = document.createElement('canvas');
+      out.width = trimW; out.height = trimH;
+      const ctx = out.getContext('2d', {colorSpace: 'srgb'});
+      roundRect(ctx, 0, 0, trimW, trimH, TRIM_R); ctx.clip();
+      ctx.drawImage(srcCanvas, -trimInset, -trimInsetY);
+      return out;
+    }
+    window.cropToTrim = cropToTrim;
+
+    // ── cardStore (IndexedDB) ──
+
+    const cardStore = (() => {
+      const DB_VER  = 1;
+      const STORE   = 'cards';
+
+      function open() {
+        const dbName = 'kartomat-' + config.bucket.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(dbName, DB_VER);
+          req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE)) {
+              db.createObjectStore(STORE, { keyPath: 'id' });
+            }
+          };
+          req.onsuccess = e => resolve(e.target.result);
+          req.onerror   = e => reject(e.target.error);
+        });
+      }
+
+      async function list() {
+        const db = await open();
+        return new Promise((resolve, reject) => {
+          const req = db.transaction(STORE, 'readonly').objectStore(STORE).getAll();
+          req.onsuccess = () => resolve(req.result);
+          req.onerror   = e => reject(e.target.error);
+        });
+      }
+
+      async function get(id) {
+        const db = await open();
+        return new Promise((resolve, reject) => {
+          const req = db.transaction(STORE, 'readonly').objectStore(STORE).get(id);
+          req.onsuccess = () => resolve(req.result ?? null);
+          req.onerror   = e => reject(e.target.error);
+        });
+      }
+
+      async function put(record) {
+        const db = await open();
+        return new Promise((resolve, reject) => {
+          const req = db.transaction(STORE, 'readwrite').objectStore(STORE).put(record);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror   = e => reject(e.target.error);
+        });
+      }
+
+      async function remove(id) {
+        const db = await open();
+        return new Promise((resolve, reject) => {
+          const req = db.transaction(STORE, 'readwrite').objectStore(STORE).delete(id);
+          req.onsuccess = () => resolve();
+          req.onerror   = e => reject(e.target.error);
+        });
+      }
+
+      async function markPublished(id, fp) {
+        const record = await get(id);
+        if (!record) throw new Error('Card not found: ' + id);
+        const now = new Date().toISOString();
+        record.publishedFingerprint = fp;
+        record.publishedAt = now;
+        record.updatedAt   = now;
+        return put(record);
+      }
+
+      return { list, get, put, remove, markPublished };
+    })();
+    window.cardStore = cardStore;
+
+    // ── triggerDownload ──
+
+    function triggerDownload(dataURL, filename) {
+      const a = document.createElement('a');
+      a.href = dataURL;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+    window.triggerDownload = triggerDownload;
+
+    // ── Save / Download ──
+
+    async function buildThumbnail(fullCanvas) {
+      const cropped = cropToTrim(fullCanvas);
+      const thumbW = 200;
+      const thumbH = Math.round(thumbW * cropped.height / cropped.width);
+      const thumb  = document.createElement('canvas');
+      thumb.width  = thumbW;
+      thumb.height = thumbH;
+      thumb.getContext('2d').drawImage(cropped, 0, 0, thumbW, thumbH);
+      return thumb.toDataURL('image/jpeg', 0.82);
+    }
+
+    async function persistCard(fullCanvas) {
+      if (!state.currentId) state.currentId = crypto.randomUUID();
+      const thumbnail = await buildThumbnail(fullCanvas);
+      await cardStore.put({
+        id:          state.currentId,
+        title:       state.title,
+        desc:        state.desc,
+        photo:       state.photo,
+        userScale:   state.userScale,
+        offsetXFrac: state.offsetXFrac,
+        offsetYFrac: state.offsetYFrac,
+        thumbnail,
+        publishedAt:          state.publishedAt ?? null,
+        publishedFingerprint: state.publishedFingerprint ?? null,
+        updatedAt:   new Date().toISOString()
+      });
+    }
+
+    async function saveCard() {
+      if (!state.img) return;
+      const canvas = await renderFrontToCanvas({ showTrimLine: false });
+      await persistCard(canvas);
+      state.dirty = false;
+      showScreen('home');
+    }
+
+    async function downloadCard() {
+      if (!state.img) return;
+      const canvas  = await renderFrontToCanvas({ showTrimLine: false });
+      const cropped = cropToTrim(canvas);
+      const slug    = (state.title || 'karte').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      triggerDownload(cropped.toDataURL('image/png'), slug + '.png');
+      await persistCard(canvas);
+      state.dirty = false;
+      showScreen('home');
+    }
+
+    // ── Home list ──
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    async function renderHomeList() {
+      const homeEl = document.getElementById('home');
+      const listEl = document.getElementById('cardList');
+      let cards;
+      try { cards = await cardStore.list(); } catch { cards = []; }
+      cards.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+
+      if (!cards.length) {
+        homeEl.classList.remove('has-list');
+        listEl.innerHTML = '';
+        return;
+      }
+
+      homeEl.classList.add('has-list');
+      listEl.innerHTML = cards.map(c => {
+        let publishTag = '<span class="badge-draft">Entwurf</span>';
+        if (c.publishedFingerprint) {
+          if (recordFingerprint(c) === c.publishedFingerprint) {
+            publishTag = '<span class="badge-published">Veröffentlicht</span>';
+          } else {
+            publishTag = '<span class="badge-published-stale">Veröffentlicht (alt)</span>';
+          }
+        }
+        return `
+        <div class="card-row">
+          <div class="card-row-tap" data-id="${escapeHtml(c.id)}">
+            <img class="card-row-thumb" src="${c.thumbnail || ''}" alt="">
+            <div class="card-row-body">
+              <div class="card-row-title">${escapeHtml(c.title || 'Unbenannt')}</div>
+              <div class="card-row-meta">${publishTag}</div>
+            </div>
+            <span class="card-row-load-hint">Laden</span>
+          </div>
+          <button class="card-row-delete-btn" type="button" data-id="${escapeHtml(c.id)}" data-online="${c.publishedAt ? '1' : '0'}">🗑</button>
+        </div>
+      `;
+      }).join('');
+
+      listEl.querySelectorAll('.card-row-tap').forEach(el => {
+        el.addEventListener('click', () => {
+          twoTapControl.tap(el, null, () => loadCardIntoEditor(el.dataset.id));
+        });
+      });
+
+      listEl.querySelectorAll('.card-row-delete-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          twoTapControl.tap(btn, 'Bestätigen', async () => {
+            const id = btn.dataset.id;
+            const record = await cardStore.get(id);
+            if (record && record.publishedAt) {
+              try {
+                await deleteCardOnline(id);
+              } catch (err) {
+                alert('Fehler beim Löschen aus der Cloud: ' + (err.message || err) + '\nDie Karte wurde nicht gelöscht.');
+                return;
+              }
+            }
+            await cardStore.remove(id);
+            renderHomeList();
+          }, () => {
+            const hint = btn.closest('.card-row').querySelector('.card-row-load-hint');
+            const original = hint.textContent;
+            hint.textContent = btn.dataset.online === '1' ? 'Online' : 'Lokal';
+            hint.classList.add('delete-hint');
+            return () => {
+              hint.textContent = original;
+              hint.classList.remove('delete-hint');
+            };
+          });
+        });
+      });
+    }
+
+    async function loadCardIntoEditor(id) {
+      const record = await cardStore.get(id);
+      if (!record) return;
+
+      state.currentId = record.id;
+      state.title     = record.title || '';
+      state.desc      = record.desc  || '';
+      state.photo     = record.photo || null;
+      state.userScale   = record.userScale   ?? 1;
+      state.offsetXFrac = record.offsetXFrac ?? null;
+      state.offsetYFrac = record.offsetYFrac ?? null;
+      state.publishedAt          = record.publishedAt          ?? null;
+      state.publishedFingerprint = record.publishedFingerprint ?? null;
+
+      if (previewImgEl) { previewImgEl.remove(); previewImgEl = null; }
+
+      if (record.photo) {
+        const img = new Image();
+        await new Promise(resolve => { img.onload = resolve; img.src = record.photo; });
+        state.img      = img;
+        state.naturalW = img.naturalWidth;
+        state.naturalH = img.naturalHeight;
+        previewImgEl = document.createElement('img');
+        previewImgEl.src = record.photo;
+        previewImgEl.draggable = false;
+        photoWindow.appendChild(previewImgEl);
+      } else {
+        state.img = null;
+        state.naturalW = 0;
+        state.naturalH = 0;
+      }
+
+      zoomSlider.value = record.userScale ?? 1;
+      state.dirty = false;
+
+      showScreen('editor');
+      updatePublishBtn();
+
+      requestAnimationFrame(() => requestAnimationFrame(async () => {
+        layoutPreviewImage();
+        await document.fonts.ready;
+        fitTitleText();
+        fitDescText();
+      }));
+    }
+
+    // ── Tap-to-edit ──
+
+    function activateTitleEdit() {
+      const span = document.getElementById('titleText');
+      const bar = span.closest('.title-bar');
+      if (bar.classList.contains('editing')) return;
+      bar.classList.add('editing');
+      span.setAttribute('contenteditable', 'plaintext-only');
+      span.setAttribute('spellcheck', 'false');
+      span.textContent = state.title;
+      span.focus();
+      const sel = window.getSelection();
+      if (sel) { const r = document.createRange(); r.selectNodeContents(span); sel.removeAllRanges(); sel.addRange(r); }
+    }
+
+    function activateDescEdit() {
+      const el = document.getElementById('descText');
+      const bar = el.closest('.text-bar');
+      if (bar.classList.contains('editing')) return;
+      bar.classList.add('editing');
+      el.setAttribute('contenteditable', 'plaintext-only');
+      el.setAttribute('spellcheck', 'false');
+      el.textContent = state.desc;
+      el.focus();
+      const sel = window.getSelection();
+      if (sel) { const r = document.createRange(); r.selectNodeContents(el); sel.removeAllRanges(); sel.addRange(r); }
+    }
+
+    document.querySelector('.title-bar').addEventListener('click', activateTitleEdit);
+    document.querySelector('.text-bar').addEventListener('click', activateDescEdit);
+
+    document.getElementById('titleText').addEventListener('input', () => {
+      const span = document.getElementById('titleText');
+      state.title = span.innerText.replace(/[\r\n]/g, '');
+      state.dirty = true;
+      fitTitleText();
+      updatePublishBtn();
+    });
+
+    document.getElementById('titleText').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') e.preventDefault();
+    });
+
+    document.getElementById('titleText').addEventListener('blur', () => {
+      const span = document.getElementById('titleText');
+      state.title = span.innerText.replace(/[\r\n]/g, '');
+      span.removeAttribute('contenteditable');
+      span.removeAttribute('spellcheck');
+      span.closest('.title-bar').classList.remove('editing');
+      fitTitleText();
+      updatePublishBtn();
+    });
+
+    document.getElementById('descText').addEventListener('input', () => {
+      const el = document.getElementById('descText');
+      state.desc = el.innerText;
+      state.dirty = true;
+      fitDescText();
+      updatePublishBtn();
+    });
+
+    document.getElementById('descText').addEventListener('blur', () => {
+      const el = document.getElementById('descText');
+      state.desc = el.innerText.trim();
+      el.removeAttribute('contenteditable');
+      el.removeAttribute('spellcheck');
+      el.closest('.text-bar').classList.remove('editing');
+      fitDescText();
+      updatePublishBtn();
+    });
+
+    // ── Gallery ──
+
+    let _galleryObjectUrls = [];
+    let _galleryObserver = null;
+    let _cardViewObjectUrl = null;
+
+    function revokeGalleryUrls() {
+      if (_galleryObserver) { _galleryObserver.disconnect(); _galleryObserver = null; }
+      _galleryObjectUrls.forEach(u => URL.revokeObjectURL(u));
+      _galleryObjectUrls = [];
+    }
+
+    function revokeCardViewUrl() {
+      if (_cardViewObjectUrl) { URL.revokeObjectURL(_cardViewObjectUrl); _cardViewObjectUrl = null; }
+    }
+
+    async function loadGallery() {
+      const stateEl = document.getElementById('galleryState');
+      const gridEl  = document.getElementById('galleryGrid');
+      stateEl.textContent = 'Wird geladen …';
+      gridEl.innerHTML = '';
+
+      const client = getSupabaseClient();
+      if (!client) { stateEl.textContent = 'Galerie nicht verfügbar'; return; }
+
+      let thumbEntries;
+      try {
+        const { data, error } = await client.storage
+          .from(_runtimeConfig.bucket)
+          .list('front', { limit: 200, sortBy: { column: 'created_at', order: 'desc' } });
+        if (error) throw error;
+        thumbEntries = (data || []).filter(f => f.name.endsWith('.thumb.jpeg'));
+      } catch {
+        stateEl.textContent = 'Galerie nicht verfügbar';
+        return;
+      }
+
+      if (!thumbEntries.length) { stateEl.textContent = 'Noch keine Karten'; return; }
+
+      stateEl.textContent = '';
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const img = entry.target._galleryImg;
+          if (!img || img.src) return;
+          const key = entry.target._galleryKey;
+          observer.unobserve(entry.target);
+          client.storage.from(_runtimeConfig.bucket).download(key).then(({ data, error }) => {
+            if (error || !data) return;
+            const url = URL.createObjectURL(data);
+            _galleryObjectUrls.push(url);
+            img.src = url;
+          }).catch(() => {});
+        });
+      }, { rootMargin: '300px' });
+
+      _galleryObserver = observer;
+
+      for (const entry of thumbEntries) {
+        const uuid = entry.name.match(/^kartomat-(.+)\.thumb\.jpeg$/)?.[1];
+        const tile = document.createElement('div');
+        tile.className = 'gallery-tile';
+        const img = document.createElement('img');
+        img.alt = '';
+        tile._galleryImg = img;
+        tile._galleryKey = 'front/' + entry.name;
+        if (uuid) {
+          tile.style.cursor = 'pointer';
+          tile.addEventListener('click', () => {
+            showScreen('cardView');
+            loadCardView(uuid);
+          });
+        }
+        tile.appendChild(img);
+        gridEl.appendChild(tile);
+        observer.observe(tile);
+      }
+    }
+
+    async function loadCardView(uuid) {
+      const img = document.getElementById('cardViewImg');
+      img.src = '';
+      const client = getSupabaseClient();
+      if (!client) return;
+      const key = 'front/kartomat-' + uuid + '.jpeg';
+      const { data, error } = await client.storage.from(_runtimeConfig.bucket).download(key);
+      if (error || !data) return;
+      _cardViewObjectUrl = URL.createObjectURL(data);
+      img.src = _cardViewObjectUrl;
+    }
+
+    // ── Init ──
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+      if (!state.dirty) { showScreen('home'); return; }
+      twoTapControl.tap(document.getElementById('backBtn'), 'Änderungen verwerfen?', () => showScreen('home'));
+    });
+
+    document.getElementById('galleryBtn').addEventListener('click', () => showScreen('gallery'));
+    document.getElementById('galleryBackBtn').addEventListener('click', () => showScreen('home'));
+    document.getElementById('cardViewBackBtn').addEventListener('click', () => showScreen('gallery'));
+
+    createBtn.addEventListener('click', openPhotoSource);
+    changePhotoBtn.addEventListener('click', openPhotoSource);
+
+    document.getElementById('chooserCameraBtn').addEventListener('click', () => {
+      closeChooser();
+      cameraInput.click();
+    });
+    document.getElementById('chooserGalerieBtn').addEventListener('click', () => {
+      closeChooser();
+      libraryInput.click();
+    });
+    document.getElementById('chooserCancelBtn').addEventListener('click', closeChooser);
+    photoChooser.addEventListener('click', (e) => {
+      if (e.target === photoChooser) closeChooser();
+    });
+    document.getElementById('saveBtn').addEventListener('click', saveCard);
+    document.getElementById('downloadBtn').addEventListener('click', downloadCard);
+    document.getElementById('publishBtn').addEventListener('click', () => {
+      twoTapControl.tap(document.getElementById('publishBtn'), 'Bestätigen', publishCard);
+    });
+
+    renderHomeList();
+
+    // ── App config (bucket / event / tagline) ──
+    const config = (() => {
+      const DEFAULTS = {
+        bucket:  '3600grad-karten-upload-hummelrummel',
+        event:   'hummelrummel',
+        tagline: 'Erstelle deine eigene Festivalkarte — schön, schnell, auf deinem Handy.'
+      };
+      const params = new URLSearchParams(location.search);
+      const out = {};
+      for (const key of Object.keys(DEFAULTS)) {
+        const param = params.get(key);
+        if (param !== null) {
+          localStorage.setItem('kartomat:' + key, param);
+          out[key] = param;
+        } else {
+          const stored = localStorage.getItem('kartomat:' + key);
+          out[key] = stored !== null ? stored : DEFAULTS[key];
+        }
+      }
+      return out;
+    })();
+
+    document.getElementById('homeEvent').textContent  = config.event;
+    document.getElementById('homeTagline').textContent = config.tagline;
+
+    // ── Asset loading ──
+
+    function _saveEtag(url, res) {
+      const v = res.headers.get('ETag') || res.headers.get('Last-Modified');
+      if (v) localStorage.setItem('kartomat:etag:' + url, v);
+    }
+
+    async function loadAssets() {
+      const base = _runtimeConfig.url + '/storage/v1/object/public/' + _runtimeConfig.bucket + '/assets';
+      const bgUrl = base + '/background.jpeg';
+      const fontUrl = base + '/Nove.woff2';
+      const [bgRes, fontRes] = await Promise.all([fetch(bgUrl), fetch(fontUrl)]);
+      if (!bgRes.ok) throw new Error('background.jpeg: HTTP ' + bgRes.status);
+      if (!fontRes.ok) throw new Error('Nove.woff2: HTTP ' + fontRes.status);
+      _saveEtag(bgUrl, bgRes);
+      _saveEtag(fontUrl, fontRes);
+      const [bgBlob, fontBlob] = await Promise.all([bgRes.blob(), fontRes.blob()]);
+      const fontBlobUrl = URL.createObjectURL(fontBlob);
+      const face = new FontFace('Nove', 'url(' + fontBlobUrl + ')', { weight: '700', style: 'normal' });
+      await face.load();
+      document.fonts.add(face);
+      URL.revokeObjectURL(fontBlobUrl);
+      if (_bgObjectUrl) URL.revokeObjectURL(_bgObjectUrl);
+      _bgObjectUrl = URL.createObjectURL(bgBlob);
+      bgImg.src = _bgObjectUrl;
+      document.getElementById('cardFull').style.backgroundImage = 'url("' + _bgObjectUrl + '")';
+    }
+
+    async function checkAssetEtags() {
+      if (!navigator.onLine) return;
+      const base = _runtimeConfig.url + '/storage/v1/object/public/' + _runtimeConfig.bucket + '/assets';
+      const urls = [base + '/background.jpeg', base + '/Nove.woff2'];
+      const changed = [];
+      await Promise.all(urls.map(async function(url) {
+        const stored = localStorage.getItem('kartomat:etag:' + url);
+        if (!stored) return;
+        try {
+          const res = await fetch(url, { method: 'HEAD', headers: { 'If-None-Match': stored } });
+          if (res.status === 200) changed.push(url);
+        } catch (e) {}
+      }));
+      if (changed.length) _updateCtrl.notifyAssets(changed);
+    }
+
+    function startAssetLoad() {
+      const spinner = document.getElementById('loadingSpinner');
+      const errorDiv = document.getElementById('loadingError');
+      spinner.style.display = '';
+      errorDiv.style.display = 'none';
+      loadAssets().then(function () {
+        showScreen('home');
+        checkAssetEtags();
+      }).catch(function (err) {
+        spinner.style.display = 'none';
+        document.getElementById('loadingErrorMsg').textContent = 'Inhalte konnten nicht geladen werden: ' + err.message;
+        errorDiv.style.display = '';
+      });
+    }
+
+    document.getElementById('loadingRetryBtn').addEventListener('click', startAssetLoad);
+
+    // ── Runtime config resolution ──
+    (function () {
+      const _CONFIG_KEY = 'kartomat_cfg';
+      const params = new URLSearchParams(location.search);
+      const qUrl = params.get('url');
+      const qKey = params.get('key');
+      const qBucket = params.get('bucket');
+
+      function showConfigError(msg) {
+        const el = document.getElementById('nocfgMsg');
+        if (el) el.textContent = msg;
+        showScreen('nocfg');
+      }
+
+      if (qUrl !== null || qKey !== null || qBucket !== null) {
+        let parsedUrl = null;
+        try { parsedUrl = new URL(qUrl || ''); } catch (e) {}
+
+        if (!parsedUrl || parsedUrl.protocol !== 'https:') {
+          showConfigError('Ungültiger Link: "url" muss eine gültige https-URL sein.');
+          return;
+        }
+        if (!qKey) {
+          showConfigError('Ungültiger Link: Parameter "key" fehlt.');
+          return;
+        }
+        if (!qBucket) {
+          showConfigError('Ungültiger Link: Parameter "bucket" fehlt.');
+          return;
+        }
+
+        _runtimeConfig = { url: qUrl, key: qKey, bucket: qBucket };
+        sessionStorage.setItem(_CONFIG_KEY, JSON.stringify(_runtimeConfig));
+        history.replaceState(null, '', location.pathname);
+      } else {
+        try {
+          const stored = sessionStorage.getItem(_CONFIG_KEY);
+          if (stored) {
+            const cfg = JSON.parse(stored);
+            if (cfg && cfg.url && cfg.key && cfg.bucket) _runtimeConfig = cfg;
+          }
+        } catch (e) {}
+      }
+
+      if (_runtimeConfig) {
+        startAssetLoad();
+      } else {
+        showScreen('nocfg');
+      }
+    })();
+
+    // ── Update controller ──
+    const _updateCtrl = (() => {
+      let _swReg = null;
+      let _assetUrls = [];
+
+      function _show() {
+        document.getElementById('updateBanner').removeAttribute('hidden');
+      }
+
+      return {
+        notifySw(reg) { _swReg = reg; _show(); },
+        notifyAssets(urls) { _assetUrls = urls; _show(); },
+        apply() {
+          if (_swReg && _swReg.waiting) {
+            _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          } else if (_assetUrls.length) {
+            caches.open('kartomat-assets').then(cache =>
+              Promise.all(_assetUrls.map(url =>
+                cache.delete(url).then(() => fetch(url)).then(res => {
+                  if (res && res.ok) _saveEtag(url, res);
+                })
+              ))
+            ).then(() => location.reload());
+          }
+        }
+      };
+    })();
+
+    document.getElementById('updateBtn').addEventListener('click', () => _updateCtrl.apply());
+
+    // ── Service Worker registration ──
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').then(reg => {
+        function handleWaiting() {
+          if (reg.waiting && navigator.serviceWorker.controller) _updateCtrl.notifySw(reg);
+        }
+        handleWaiting();
+        reg.addEventListener('updatefound', () => {
+          const w = reg.installing;
+          w.addEventListener('statechange', () => { if (w.state === 'installed') handleWaiting(); });
+        });
+      });
+      let _reloadLock = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!_reloadLock) { _reloadLock = true; location.reload(); }
+      });
+    }
+  </script>
+
+</body>
+</html>
