@@ -4,7 +4,7 @@ const SHELL_CACHE = 'kartomat-shell-{version}';
 const ASSET_CACHE = 'kartomat-assets';
 
 const PRECACHE = [
-  './kartomat.html',
+  './index.html',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
   './manifest.json',
   './dist/icons/icon-192.png',

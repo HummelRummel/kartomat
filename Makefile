@@ -1,6 +1,6 @@
-kartomat.html: kartomat.template.html scripts/build.py
+index.html: kartomat.template.html manifest.json scripts/build.py scripts/sw.template.js
 	python3 scripts/build.py
 
-.PHONY: clean kartomat.html
+.PHONY: clean index.html
 clean:
-	rm -f kartomat.html
+	rm -f index.html sw.js
