@@ -36,8 +36,8 @@ if os.path.exists(manifest_src):
     print('manifest.json already present')
 else:
     manifest = {
-        "name": "Kartomat",
-        "short_name": "Kartomat",
+        "name": "(K)ARTOMAT",
+        "short_name": "(K)ARTOMAT",
         "theme_color": "#0d0d0d",
         "background_color": "#0d0d0d",
         "display": "standalone",
