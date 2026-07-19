@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>Kartomat</title>
-  <meta name="build-version" content="3edfb87c4603">
+  <meta name="build-version" content="05ece1912baa">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1948,11 +1948,26 @@
       if (v) localStorage.setItem('kartomat:etag:' + url, v);
     }
 
+    // Assets live in a private bucket, so they are fetched through the
+    // authenticated object endpoint with the anon key rather than the public URL.
+    function _assetBase() {
+      return _runtimeConfig.url + '/storage/v1/object/authenticated/' + _runtimeConfig.bucket + '/assets';
+    }
+    function _authHeaders(extra) {
+      return Object.assign({
+        apikey: _runtimeConfig.key,
+        Authorization: 'Bearer ' + _runtimeConfig.key
+      }, extra || {});
+    }
+
     async function loadAssets() {
-      const base = _runtimeConfig.url + '/storage/v1/object/public/' + _runtimeConfig.bucket + '/assets';
+      const base = _assetBase();
       const bgUrl = base + '/background.jpeg';
       const fontUrl = base + '/Nove.woff2';
-      const [bgRes, fontRes] = await Promise.all([fetch(bgUrl), fetch(fontUrl)]);
+      const [bgRes, fontRes] = await Promise.all([
+        fetch(bgUrl, { headers: _authHeaders() }),
+        fetch(fontUrl, { headers: _authHeaders() })
+      ]);
       if (!bgRes.ok) throw new Error('background.jpeg: HTTP ' + bgRes.status);
       if (!fontRes.ok) throw new Error('Nove.woff2: HTTP ' + fontRes.status);
       _saveEtag(bgUrl, bgRes);
@@ -1971,14 +1986,14 @@
 
     async function checkAssetEtags() {
       if (!navigator.onLine) return;
-      const base = _runtimeConfig.url + '/storage/v1/object/public/' + _runtimeConfig.bucket + '/assets';
+      const base = _assetBase();
       const urls = [base + '/background.jpeg', base + '/Nove.woff2'];
       const changed = [];
       await Promise.all(urls.map(async function(url) {
         const stored = localStorage.getItem('kartomat:etag:' + url);
         if (!stored) return;
         try {
-          const res = await fetch(url, { method: 'HEAD', headers: { 'If-None-Match': stored } });
+          const res = await fetch(url, { method: 'HEAD', headers: _authHeaders({ 'If-None-Match': stored }) });
           if (res.status === 200) changed.push(url);
         } catch (e) {}
       }));

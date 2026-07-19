@@ -39,7 +39,7 @@ self.addEventListener('fetch', event => {
 
   // Supabase bucket assets (background, font) → runtime cache-first
   // Match by path since the Supabase origin is runtime config, not known at build time
-  if (url.pathname.includes('/storage/v1/object/public/') && url.pathname.includes('/assets/')) {
+  if (url.pathname.includes('/storage/v1/object/authenticated/') && url.pathname.includes('/assets/')) {
     event.respondWith(
       caches.match(request).then(cached => {
         if (cached) return cached;
