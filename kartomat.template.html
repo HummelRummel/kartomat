@@ -1993,8 +1993,12 @@
         const stored = localStorage.getItem('kartomat:etag:' + url);
         if (!stored) return;
         try {
-          const res = await fetch(url, { method: 'HEAD', headers: _authHeaders({ 'If-None-Match': stored }) });
-          if (res.status === 200) changed.push(url);
+          // Supabase Storage does not return 304 for conditional HEAD requests,
+          // so compare the validator ourselves instead of trusting the status.
+          const res = await fetch(url, { method: 'HEAD', headers: _authHeaders() });
+          if (!res.ok) return;
+          const current = res.headers.get('ETag') || res.headers.get('Last-Modified');
+          if (current && current !== stored) changed.push(url);
         } catch (e) {}
       }));
       if (changed.length) _updateCtrl.notifyAssets(changed);
