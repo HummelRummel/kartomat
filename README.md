@@ -4,7 +4,7 @@ Mobile-first tool for creating card **fronts** at the festival. Front-only, uplo
 
 ## Build
 
-The source is `kartomat.template.html`. The build step (`scripts/build.py`) copies it to the runnable `kartomat.html` and generates the service worker `sw.js`:
+The source is `kartomat.template.html`. The build step (`scripts/build.py`) renders it to `index.html` — the file GitHub Pages serves as the directory default — and generates the service worker `sw.js`:
 
 ```
 make
@@ -13,23 +13,23 @@ make
 **Prerequisites:**
 - Python 3
 
-`kartomat.html` is git-ignored. `make clean` removes it.
+`index.html` and `sw.js` are build outputs but are committed, because GitHub Pages serves them directly from the repo. Rebuild and commit both whenever the template or `manifest.json` changes. `make clean` removes them.
 
 The font and background image are fetched at runtime from the configured Supabase bucket — see [Bucket assets](#bucket-assets) for the upload step.
 
 ### Versioning & update detection
 
-`build.py` stamps a **content version** into both `kartomat.html` (`<meta name="build-version">`) and `sw.js` (`BUILD_VERSION` / the `kartomat-shell-<version>` cache name). The version is the SHA-256 hash of the user-facing sources — `kartomat.template.html` and `manifest.json` — truncated to 12 hex chars.
+`build.py` stamps a **content version** into both `index.html` (`<meta name="build-version">`) and `sw.js` (`BUILD_VERSION` / the `kartomat-shell-<version>` cache name). The version is the SHA-256 hash of the user-facing sources — `kartomat.template.html` and `manifest.json` — truncated to 12 hex chars.
 
 Because it hashes only those sources, editing unrelated files (docs, tooling, other issues) does **not** change the version, so the in-app "Update verfügbar" banner does not fire spuriously. The banner appears when a rebuilt `sw.js` differs from the installed one: either the content version changed, or the caching logic in `scripts/sw.template.js` changed (which alters `sw.js` regardless of version).
 
 ## Opening the app
 
-Open `kartomat.html` directly in a browser — no server needed. Supabase is loaded from CDN; all other features work offline via the service worker.
+Open `index.html` directly in a browser, or visit the deployed GitHub Pages URL — no server needed. Supabase is loaded from CDN; all other features work offline via the service worker.
 
 ## Configuring via URL / QR
 
-The built `kartomat.html` carries no credentials. Pass the Supabase project URL, anon key, and bucket as query-string parameters when opening the file:
+The built `index.html` carries no credentials. Pass the Supabase project URL, anon key, and bucket as query-string parameters when opening the page:
 
 | Parameter | Description |
 |---|---|
@@ -40,8 +40,10 @@ The built `kartomat.html` carries no credentials. Pass the Supabase project URL,
 **Example link:**
 
 ```
-kartomat.html?url=https://<project>.supabase.co&key=<anon key>&bucket=<bucket>
+https://<user>.github.io/<repo>/?url=https://<project>.supabase.co&key=<anon key>&bucket=<bucket>
 ```
+
+(Opening a local file works too: `index.html?url=…&key=…&bucket=…`.)
 
 **QR codes:** Encode the full link above with any QR generator. The anon JWT is long (~200+ characters), so the resulting QR code is dense — use an adequate print size (≥ 4 cm) and a high error-correction level (Q or H) to ensure reliable scanning.
 
