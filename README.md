@@ -54,6 +54,8 @@ The built `index.html` carries no credentials. Pass the Supabase project URL, an
 | `bucket` | Storage bucket name |
 | `event` | Unique event identifier; cards created here are owned by this event. Cards from other events remain accessible but are shown as foreign. |
 | `tagline` | Optional tagline shown on the home screen. Defaults to a generic festival-card blurb. |
+| `policy` | Optional content-policy text shown above the publish confirm. Overrides the default German reminder. Persisted to localStorage. |
+| `adminkey` | Supabase admin key with write access to `lockout.json` and move/delete rights on the card bucket. Activates ephemeral admin mode — not persisted to localStorage; any reload ends admin mode. See [Admin mode](#admin-mode). |
 
 `url`, `key`, and `bucket` must appear together in one link; omitting any triggers a configuration error. `event` and `tagline` fall back to built-in defaults if omitted but should be set per event.
 
@@ -78,13 +80,13 @@ https://<user>.github.io/<repo>/?url=https://<project>.supabase.co&key=<anon key
 
 Foreign cards show the originating event name in place of the publish tag, and their thumbnail is shown at 50% opacity.
 
-**Gallery screen** — a full-screen grid of published cards, newest first, fetched from Supabase Storage (up to 200 cards). A **Zurück** button at the top returns to the home screen. The grid has three states:
+**Gallery screen** — a full-screen grid of published cards, newest first, fetched from Supabase Storage (up to 200 cards). A **Zurück** button at the top returns to the home screen. When returning from a card view, scroll position is restored instantly with no refetch. The grid has three states:
 - *Wird geladen …* — while thumbnails are being fetched.
 - *Noch keine Karten* — when nothing has been published yet.
 - *Galerie nicht verfügbar* — when the list or download fails.
 Only cards published with the new three-file bundle (`.thumb.jpeg` present) appear in the gallery; legacy JSON-only cards are not shown.
 
-**Card view screen** — a read-only full-screen view of a single published card, opened by tapping a gallery thumbnail. Shows the full-size published preview image. A **Herunterladen** button downloads the full-size JPEG (reusing the already-fetched blob — no extra network request; saved as `kartomat-<uuid>.jpeg`). A **Zurück** button returns to the gallery. No editing or re-publishing from this screen.
+**Card view screen** — a read-only full-screen view of a single published card, opened by tapping a gallery thumbnail. Shows the full-size published preview image. A **Herunterladen** button downloads the full-size JPEG (reusing the already-fetched blob — no extra network request; saved as `kartomat-<uuid>.jpeg`). Tapping the card image returns to the gallery. No editing or re-publishing from this screen.
 
 **Starting a card** — on mobile, tapping **Karte erstellen** shows a chooser (Kamera / Galerie). On desktop, the file picker opens directly. After photo selection the editor opens immediately.
 
@@ -96,7 +98,13 @@ Only cards published with the new three-file bundle (`.thumb.jpeg` present) appe
 - **Zurück** — navigates to the home screen immediately when there are no unsaved changes; requires a two-tap "Änderungen verwerfen?" confirm when there are.
 - Bottom action bar — 2-column grid: **Speichern** + **Herunterladen** side-by-side on row 1; **Veröffentlichen** full-width on row 2.
 
-**Two-tap confirm** — Veröffentlichen uses a two-tap pattern: first tap arms (relabels to "Bestätigen"); second tap commits. Tapping elsewhere resets the armed state. Zurück also uses this pattern when there are unsaved changes (relabels to "Änderungen verwerfen?"). Speichern is two-tap (relabels to "Wirklich?") only when overwriting an already-saved own card; a new card or a foreign-card fork is single-tap. Herunterladen is always single-tap.
+**Publish flow** — Tapping **Veröffentlichen** triggers a lockout check (fetch `lockout.json` from the `admin` bucket). Three outcomes:
+
+- **Connection error** — a banner ("Keine Verbindung") appears above the button with an **Erneut versuchen** button. Publishing is blocked until the check succeeds; going offline cannot bypass this.
+- **User is locked out** — a locked-out banner ("Du bist gesperrt") appears. No confirm action is offered — this is a dead end.
+- **User is clear** — a content-policy banner appears (text defaults to a German reminder; overridable via `?policy=`). A **Bestätigen** button completes the upload.
+
+**Two-tap confirm** — Zurück uses this pattern when there are unsaved changes (relabels to "Änderungen verwerfen?"). Speichern is two-tap (relabels to "Wirklich?") only when overwriting an already-saved own card; a new card or a foreign-card fork is single-tap. Herunterladen is always single-tap.
 
 **Delete flow** — The trash button (🗑) on each home-list card branches on ownership and publish state:
 - **Foreign card** — single "delete locally" confirmation banner, then removes the local record only; the original in its own event's cloud storage is untouched.
@@ -129,6 +137,12 @@ API: `list()`, `get(id)`, `put(record)`, `remove(id)`, `markPublished(id, finger
 
 **Save** requires only a photo. **Download** is a pure export — it renders and downloads the PNG and leaves the user in the editor; it does not persist the card and does not navigate home. **Publish** additionally requires title and description; empty fields are flagged with a red border. The Publish button is also disabled and relabelled **Keine Änderungen** when the card is already published and unchanged (i.e. `publishedFingerprint` matches the current version), preventing redundant re-publishes.
 
+## User identity
+
+On first launch the app generates a `crypto.randomUUID()` and stores it in localStorage under `kartomat:userId`. This anonymous UUID is stable across sessions (until the user clears site data) and is attached to every published card as `creatorId` in the JSON bundle.
+
+Cards published before this feature was introduced carry no `creatorId` and are treated as **"Ersteller unbekannt"** in admin actions — they cannot be used to lock out a creator.
+
 ## Cloud publish
 
 Publishing uploads the card bundle to Supabase Storage and marks the card as published locally (`publishedAt` timestamp and `publishedFingerprint` of the uploaded content).
@@ -139,7 +153,7 @@ Publishing uploads three objects under the `front/` prefix, in this order:
 
 | Path | Content |
 |---|---|
-| `front/kartomat-<uuid>.json` | Front-bundle JSON (`version:1, side:'front', title, desc, userScale, offsetXFrac, offsetYFrac, photo, referenceJpeg`) |
+| `front/kartomat-<uuid>.json` | Front-bundle JSON (`version:1, side:'front', title, desc, userScale, offsetXFrac, offsetYFrac, photo, referenceJpeg, creatorId`) |
 | `front/kartomat-<uuid>.jpeg` | Full-size preview — trim-cropped card front, JPEG q0.9 |
 | `front/kartomat-<uuid>.thumb.jpeg` | Grid thumbnail (~200 px wide) written **last** |
 
@@ -162,6 +176,8 @@ The font (`Nove.woff2`) and background image (`background.jpeg`) are fetched at 
 
 ## Supabase prerequisites
 
+### Card bucket (private)
+
 1. The configured bucket (passed via the `bucket` URL parameter) must exist.
 2. Assets uploaded to `assets/`, with a SELECT policy allowing the `anon` role to read `assets/**` — see [Bucket assets](#bucket-assets).
 3. An RLS **INSERT** policy must allow the `anon` role to write into `front/`. Without it, uploads return 403.
@@ -169,3 +185,47 @@ The font (`Nove.woff2`) and background image (`background.jpeg`) are fetched at 
 5. An RLS **DELETE** policy must allow the `anon` role to delete objects in `front/`. Without it, online card deletion returns 403.
 
 Use the anon key (not the service-role key) in the configuration link.
+
+### Admin bucket (public) — manual setup
+
+These steps are one-time, per Supabase project. The app degrades gracefully (error banners / alerts) if they are missing.
+
+1. **Create** a public bucket named `admin` in the same Supabase project.
+2. **Seed** `lockout.json` — upload a file containing `[]` (empty JSON array) to the `admin` bucket. Without this file a fresh deployment blocks all publishing until the file exists (the lockout check treats a missing file as a connection error). Alternatively, performing any admin lock/unlock action creates or overwrites it automatically.
+3. **RLS — anon read:** add a **SELECT** policy for the `anon` role covering all objects in the `admin` bucket. This allows the public lockout check to fetch `lockout.json` without authentication.
+4. **RLS — anon write: none.** Do not add INSERT/UPDATE/DELETE policies for `anon` on the `admin` bucket. Normal users must not be able to write `lockout.json`.
+5. **RLS — admin key write:** the dedicated admin key must have INSERT/UPDATE/DELETE rights on `lockout.json` in the `admin` bucket, and move/delete rights on `front/` and `front-deleted/` in the card bucket.
+6. **Provision the admin user/key:** create a dedicated Supabase user (or use a service-role key scoped appropriately) with the rights above. Pass this key as `?adminkey=` in the admin link.
+
+### `front-deleted/` prefix
+
+Deleted cards are moved (not erased) to the `front-deleted/` prefix in the **card bucket** (three files per card: `.json`, `.jpeg`, `.thumb.jpeg`). This prefix is private like the rest of the bucket. The public gallery lists only `front/`; the admin Deleted Gallery lists `front-deleted/`. Restoring a card moves the three files back to `front/`.
+
+## Admin mode
+
+Admin mode is activated by opening the app with `?adminkey=<key>` in the URL. The key is held in memory only and stripped from the visible URL bar — any reload ends admin mode. Re-entry requires opening the admin link again.
+
+### Visibility
+
+- Home title changes from `(K)artomat` to `(K)admin`.
+- A fixed red banner reading **"(K)ADMIN — Admin-Modus aktiv"** is visible on every screen.
+- The **Karte erstellen** button and local card list are hidden. A **Gelöschte Galerie** button appears in their place.
+
+### Deleting a card
+
+In admin mode each card detail view shows a **Löschen** button at the top (instead of Herunterladen). The delete sequence:
+
+1. First tap — a "Wirklich löschen?" two-tap confirm arms.
+2. On confirm — a panel offers two choices: **Nur löschen** and **Löschen & sperren** (plus cancel).
+   - **Nur löschen** — moves the three card files to `front-deleted/`.
+   - **Löschen & sperren** — moves the files and adds the creator's UUID to `lockout.json`. Disabled (shown as **"Schon gesperrt"**) if the creator is already locked; disabled (shown as **"Ersteller unbekannt"**) for legacy cards without a `creatorId`.
+3. The card disappears from the public gallery immediately.
+
+Tapping the card image in an admin detail view returns to the gallery (same tap-to-return as normal mode).
+
+### Deleted Gallery
+
+The **Gelöschte Galerie** screen lists cards in `front-deleted/`. Opening a deleted card shows two action buttons:
+
+- **Wiederherstellen** — moves the three files back to `front/`. If the creator is currently locked out, the lock is automatically removed. Requires a confirm step.
+- **Ersteller entsperren** — removes the creator's UUID from `lockout.json` without restoring the card. Available only when the creator is actually on the lockout list; disabled for legacy cards with no `creatorId`. Requires a confirm step.

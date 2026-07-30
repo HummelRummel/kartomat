@@ -592,7 +592,8 @@
 
     /* ── Card View screen ── */
 
-    #cardView {
+    #cardView,
+    #deletedCardView {
       flex-direction: column;
       height: 100dvh;
       overflow: hidden;
@@ -608,12 +609,34 @@
       padding: 8px;
     }
 
-    #cardViewImg {
+    #cardViewImg,
+    #deletedCardViewImg {
       max-width: 100%;
       max-height: 100%;
       object-fit: contain;
       border-radius: 4px;
+      cursor: pointer;
     }
+
+    #deletePanel {
+      width: 100%;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-left: 3px solid #e85d4c;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #deletePanel[hidden] { display: none; }
+    .delete-panel-title {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin: 0;
+    }
+    .delete-panel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
     /* ── Not configured ── */
 
@@ -716,6 +739,35 @@
       cursor: pointer;
     }
 
+    /* ── Publish banner ── */
+
+    .publish-banner {
+      width: 100%;
+      max-width: 420px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-radius: 3px;
+      border-left: 3px solid var(--muted);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .publish-banner[hidden] { display: none; }
+    .publish-banner-text { font-size: 13px; line-height: 1.5; }
+    .publish-banner-text strong {
+      display: block;
+      font-family: 'Nove', system-ui, sans-serif;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 3px;
+    }
+    .publish-banner-text span { color: var(--muted); }
+    .publish-banner-actions { display: flex; gap: 8px; }
+    .publish-banner.locked { border-left-color: #e85d4c; }
+    .publish-banner.noconn { border-left-color: #b08a3e; }
+
     /* ── Install banner ── */
 
     #installBanner {
@@ -759,6 +811,32 @@
       cursor: pointer;
       padding: 0;
     }
+
+    /* ── Admin banner ── */
+    #adminBanner {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      background: #c00;
+      color: #fff;
+      text-align: center;
+      padding: 10px 16px;
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    body.admin-active #adminBanner { display: block; }
+    body.admin-active #loading,
+    body.admin-active #nocfg,
+    body.admin-active #home,
+    body.admin-active #gallery,
+    body.admin-active #cardView,
+    body.admin-active #deletedGallery,
+    body.admin-active #deletedCardView,
+    body.admin-active #editor { padding-top: 40px; }
   </style>
 
   <script async crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -786,6 +864,9 @@
     <span>Update verfügbar</span>
     <button id="updateBtn">Aktualisieren</button>
   </div>
+
+  <!-- ── Admin banner ── -->
+  <div id="adminBanner">(K)ADMIN — Admin-Modus aktiv</div>
 
   <!-- ── Install banner ── -->
   <div id="installBanner" hidden>
@@ -822,6 +903,7 @@
     <p class="app-tagline" id="homeTagline"></p>
     <div class="home-actions">
       <button class="btn-action" id="galleryBtn">Galerie</button>
+      <button class="btn-action" id="deletedGalleryBtn" style="display:none">Gelöschte Galerie</button>
       <button class="btn-primary" id="createBtn">Karte erstellen</button>
     </div>
     <div id="cardList" class="card-list"></div>
@@ -841,11 +923,41 @@
   <!-- ── Card View ── -->
   <div id="cardView" class="screen">
     <header class="gallery-header">
-      <button class="btn-action" id="cardViewBackBtn">Zurück</button>
       <button class="btn-action" id="cardViewDownloadBtn">Herunterladen</button>
+      <button class="btn-action" id="cardViewDeleteBtn" style="display:none">Löschen</button>
     </header>
+    <div id="deletePanel" hidden>
+      <p class="delete-panel-title">Karte löschen</p>
+      <div class="delete-panel-actions">
+        <button class="btn-action" id="deleteLockBtn">Löschen &amp; sperren</button>
+        <button class="btn-action" id="deleteOnlyBtn">Nur löschen</button>
+        <button class="btn-action" id="deleteCancelBtn">Abbrechen</button>
+      </div>
+    </div>
     <div class="card-view-body">
       <img id="cardViewImg" alt="" />
+    </div>
+  </div>
+
+  <!-- ── Deleted Gallery ── -->
+  <div id="deletedGallery" class="screen">
+    <header class="gallery-header">
+      <button class="btn-action" id="deletedGalleryBackBtn">Zurück</button>
+    </header>
+    <div class="gallery-body">
+      <div id="deletedGalleryState" class="gallery-state"></div>
+      <div id="deletedGalleryGrid" class="gallery-grid"></div>
+    </div>
+  </div>
+
+  <!-- ── Deleted Card View ── -->
+  <div id="deletedCardView" class="screen">
+    <header class="gallery-header">
+      <button class="btn-action" id="deletedCardViewUnlockBtn" disabled>Ersteller entsperren</button>
+      <button class="btn-action" id="deletedCardViewRestoreBtn">Wiederherstellen</button>
+    </header>
+    <div class="card-view-body">
+      <img id="deletedCardViewImg" alt="" />
     </div>
   </div>
 
@@ -874,6 +986,13 @@
         <input type="range" id="zoomSlider" min="1" max="4" step="0.01" value="1">
         <span class="zoom-icon">+</span>
       </div>
+      <div id="publishBanner" class="publish-banner" hidden>
+        <div class="publish-banner-text">
+          <strong id="publishBannerTitle"></strong>
+          <span id="publishBannerBody"></span>
+        </div>
+        <div class="publish-banner-actions" id="publishBannerActions"></div>
+      </div>
       <div class="action-bar">
         <button class="btn-action" id="saveBtn">Speichern</button>
         <button class="btn-action" id="downloadBtn">Herunterladen</button>
@@ -885,15 +1004,56 @@
   <script>
     // ── Screen router ──
 
+    let _currentScreen = null;
+    let _galleryLoaded = false;
+    let _galleryScrollTop = 0;
+    let _deletedGalleryLoaded = false;
+    let _deletedGalleryScrollTop = 0;
+
     function showScreen(id) {
-      if (id !== 'gallery') revokeGalleryUrls();
+      const prev = _currentScreen;
+      const toCardViewFromGallery = id === 'cardView' && prev === 'gallery';
+      const returningToGallery = id === 'gallery' && prev === 'cardView';
+      const toDeletedCardView = id === 'deletedCardView' && prev === 'deletedGallery';
+      const returningToDeletedGallery = id === 'deletedGallery' && prev === 'deletedCardView';
+
+      if (id !== 'gallery' && !toCardViewFromGallery) revokeGalleryUrls();
       if (id !== 'cardView') revokeCardViewUrl();
+      if (id !== 'deletedGallery' && !toDeletedCardView) revokeDeletedGalleryUrls();
+      if (id !== 'deletedCardView') revokeDeletedCardViewUrl();
+
+      if (prev === 'gallery' && id !== 'gallery') {
+        _galleryScrollTop = document.querySelector('#gallery .gallery-body').scrollTop;
+      }
+      if (prev === 'deletedGallery' && id !== 'deletedGallery') {
+        _deletedGalleryScrollTop = document.querySelector('#deletedGallery .gallery-body').scrollTop;
+      }
+
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
+      _currentScreen = id;
       twoTapControl.reset();
-      if (id === 'home') renderHomeList();
+      resetPublishBanner();
+      if (id === 'home') { renderHomeList(); _galleryLoaded = false; }
       if (id === 'home') _installCtrl.markEngaged();
-      if (id === 'gallery') loadGallery();
+      if (id === 'gallery') {
+        if (returningToGallery && _galleryLoaded) {
+          requestAnimationFrame(() => {
+            document.querySelector('#gallery .gallery-body').scrollTop = _galleryScrollTop;
+          });
+        } else {
+          loadGallery();
+        }
+      }
+      if (id === 'deletedGallery') {
+        if (returningToDeletedGallery && _deletedGalleryLoaded) {
+          requestAnimationFrame(() => {
+            document.querySelector('#deletedGallery .gallery-body').scrollTop = _deletedGalleryScrollTop;
+          });
+        } else {
+          loadDeletedGallery();
+        }
+      }
     }
 
     // ── Geometry constants (verbatim from hummelrummel-card-creator.html) ──
@@ -929,6 +1089,15 @@
       publishedFingerprint: null,
       dirty: false
     };
+
+    // ── Anonymous per-device identity ──
+
+    const _USER_ID_KEY = 'kartomat:userId';
+    let userId = localStorage.getItem(_USER_ID_KEY);
+    if (!userId) {
+      userId = crypto.randomUUID();
+      localStorage.setItem(_USER_ID_KEY, userId);
+    }
 
     // ── Publish-state fingerprint ──
 
@@ -1029,12 +1198,15 @@
 
     let _runtimeConfig = null;
     let _supaClient = null;
+    let _adminMode = false;
+    let _adminKey = null;
 
     function getSupabaseClient() {
       if (_supaClient) return _supaClient;
       if (!_runtimeConfig) return null;
       if (typeof window.supabase === 'undefined' || typeof window.supabase.createClient !== 'function') return null;
-      _supaClient = window.supabase.createClient(_runtimeConfig.url, _runtimeConfig.key);
+      const key = (_adminMode && _adminKey) ? _adminKey : _runtimeConfig.key;
+      _supaClient = window.supabase.createClient(_runtimeConfig.url, key);
       return _supaClient;
     }
 
@@ -1049,6 +1221,7 @@
         version: 1, side: 'front', title: state.title, desc: state.desc,
         userScale: state.userScale, offsetXFrac: state.offsetXFrac, offsetYFrac: state.offsetYFrac,
         photo: state.img ? state.img.src : null,
+        creatorId: userId,
         referenceJpeg
       };
     }
@@ -1119,6 +1292,168 @@
       ];
       const { error } = await client.storage.from(bucket).remove(paths);
       if (error) throw error;
+    }
+
+    async function adminMoveCard(uuid) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      const bucket = _runtimeConfig.bucket;
+      for (const ext of ['json', 'jpeg', 'thumb.jpeg']) {
+        const { error } = await client.storage.from(bucket).move(
+          `front/kartomat-${uuid}.${ext}`,
+          `front-deleted/kartomat-${uuid}.${ext}`
+        );
+        if (error) throw error;
+      }
+    }
+
+    async function adminRestoreCard(uuid) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      const bucket = _runtimeConfig.bucket;
+      for (const ext of ['json', 'jpeg', 'thumb.jpeg']) {
+        const { error } = await client.storage.from(bucket).move(
+          `front-deleted/kartomat-${uuid}.${ext}`,
+          `front/kartomat-${uuid}.${ext}`
+        );
+        if (error) throw error;
+      }
+    }
+
+    async function fetchCardBundle(uuid) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      const { data, error } = await client.storage
+        .from(_runtimeConfig.bucket)
+        .download(`front/kartomat-${uuid}.json`);
+      if (error) throw error;
+      return JSON.parse(await data.text());
+    }
+
+    async function adminWriteLockout(creatorId) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      let list = [];
+      try {
+        const fetched = await fetchLockoutList();
+        if (Array.isArray(fetched)) list = fetched;
+      } catch (_) {}
+      if (!list.some(e => e.id === creatorId)) {
+        list.push({ id: creatorId, since: new Date().toISOString() });
+      }
+      const blob = new Blob([JSON.stringify(list)], { type: 'application/json' });
+      const { error } = await client.storage
+        .from('admin')
+        .upload('lockout.json', blob, { contentType: 'application/json', upsert: true });
+      if (error) throw error;
+    }
+
+    async function adminRemoveLockout(creatorId) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      let list = [];
+      try {
+        const fetched = await fetchLockoutList();
+        if (Array.isArray(fetched)) list = fetched;
+      } catch (_) {}
+      list = list.filter(e => e.id !== creatorId);
+      const blob = new Blob([JSON.stringify(list)], { type: 'application/json' });
+      const { error } = await client.storage
+        .from('admin')
+        .upload('lockout.json', blob, { contentType: 'application/json', upsert: true });
+      if (error) throw error;
+    }
+
+    async function fetchDeletedCardBundle(uuid) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      const { data, error } = await client.storage
+        .from(_runtimeConfig.bucket)
+        .download(`front-deleted/kartomat-${uuid}.json`);
+      if (error) throw error;
+      return JSON.parse(await data.text());
+    }
+
+    // ── Lockout check & publish banners ──
+
+    async function fetchLockoutList() {
+      const url = _runtimeConfig.url + '/storage/v1/object/public/admin/lockout.json?t=' + Date.now();
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }
+
+    function resetPublishBanner() {
+      const el = document.getElementById('publishBanner');
+      if (!el) return;
+      el.setAttribute('hidden', '');
+      el.className = 'publish-banner';
+    }
+
+    function showPublishBanner(type) {
+      const bannerEl   = document.getElementById('publishBanner');
+      const titleEl    = document.getElementById('publishBannerTitle');
+      const bodyEl     = document.getElementById('publishBannerBody');
+      const actionsEl  = document.getElementById('publishBannerActions');
+      bannerEl.className = 'publish-banner';
+      actionsEl.innerHTML = '';
+
+      if (type === 'policy') {
+        const lines = config.policy.split('\n');
+        titleEl.textContent = lines[0];
+        bodyEl.textContent  = lines.slice(1).join('\n');
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className   = 'btn-action btn-action-primary';
+        confirmBtn.style.flex  = '1';
+        confirmBtn.textContent = 'Bestätigen';
+        confirmBtn.addEventListener('click', () => { resetPublishBanner(); publishCard(); });
+
+        const dismissBtn = document.createElement('button');
+        dismissBtn.className   = 'btn-action';
+        dismissBtn.textContent = '×';
+        dismissBtn.addEventListener('click', () => { resetPublishBanner(); updatePublishBtn(); });
+
+        actionsEl.appendChild(confirmBtn);
+        actionsEl.appendChild(dismissBtn);
+      } else if (type === 'locked') {
+        bannerEl.classList.add('locked');
+        titleEl.textContent = 'Du bist gesperrt.';
+        bodyEl.textContent  = 'Du kannst keine Karten mehr veröffentlichen, weil du gegen die Veröffentlichungsrichtlinie verstoßen hast.';
+      } else if (type === 'noconn') {
+        bannerEl.classList.add('noconn');
+        titleEl.textContent = 'Keine Verbindung.';
+        bodyEl.textContent  = 'Das hat leider nicht geklappt. Bitte versuche es noch einmal.';
+
+        const retryBtn = document.createElement('button');
+        retryBtn.className   = 'btn-action';
+        retryBtn.textContent = 'Erneut versuchen';
+        retryBtn.addEventListener('click', () => { resetPublishBanner(); runPublishCheck(); });
+        actionsEl.appendChild(retryBtn);
+      }
+
+      bannerEl.removeAttribute('hidden');
+    }
+
+    async function runPublishCheck() {
+      const btn = document.getElementById('publishBtn');
+      if (!btn) return;
+      btn.disabled = true;
+      btn.classList.remove('btn-action-primary');
+      btn.innerHTML = '<span class="btn-spinner"></span>Prüfen…';
+
+      let lockoutList;
+      try {
+        lockoutList = await fetchLockoutList();
+      } catch (e) {
+        btn.textContent = 'Veröffentlichen';
+        showPublishBanner('noconn');
+        return;
+      }
+
+      btn.textContent = 'Veröffentlichen';
+      const isLocked = Array.isArray(lockoutList) && lockoutList.some(entry => entry.id === userId);
+      showPublishBanner(isLocked ? 'locked' : 'policy');
     }
 
     function updatePublishBtn() {
@@ -1688,6 +2023,7 @@
     }
 
     async function renderHomeList() {
+      if (_adminMode) return;
       const homeEl = document.getElementById('home');
       const listEl = document.getElementById('cardList');
       let cards;
@@ -1893,6 +2229,14 @@
     let _galleryObserver = null;
     let _cardViewObjectUrl = null;
     let _cardViewUuid = null;
+    let _deletePanelUuid = null;
+    let _deletePanelCreatorId = null;
+    let _deletedGalleryObjectUrls = [];
+    let _deletedGalleryObserver = null;
+    let _deletedCardViewObjectUrl = null;
+    let _deletedCardViewUuid = null;
+    let _deletedCardViewCreatorId = null;
+    let _deletedCardViewIsLocked = false;
 
     function revokeGalleryUrls() {
       if (_galleryObserver) { _galleryObserver.disconnect(); _galleryObserver = null; }
@@ -1903,9 +2247,26 @@
     function revokeCardViewUrl() {
       if (_cardViewObjectUrl) { URL.revokeObjectURL(_cardViewObjectUrl); _cardViewObjectUrl = null; }
       _cardViewUuid = null;
+      _deletePanelUuid = null;
+      _deletePanelCreatorId = null;
+      document.getElementById('deletePanel').setAttribute('hidden', '');
+    }
+
+    function revokeDeletedGalleryUrls() {
+      if (_deletedGalleryObserver) { _deletedGalleryObserver.disconnect(); _deletedGalleryObserver = null; }
+      _deletedGalleryObjectUrls.forEach(u => URL.revokeObjectURL(u));
+      _deletedGalleryObjectUrls = [];
+    }
+
+    function revokeDeletedCardViewUrl() {
+      if (_deletedCardViewObjectUrl) { URL.revokeObjectURL(_deletedCardViewObjectUrl); _deletedCardViewObjectUrl = null; }
+      _deletedCardViewUuid = null;
+      _deletedCardViewCreatorId = null;
+      _deletedCardViewIsLocked = false;
     }
 
     async function loadGallery() {
+      _galleryLoaded = false;
       const stateEl = document.getElementById('galleryState');
       const gridEl  = document.getElementById('galleryGrid');
       stateEl.textContent = 'Wird geladen …';
@@ -1967,6 +2328,7 @@
         gridEl.appendChild(tile);
         observer.observe(tile);
       }
+      _galleryLoaded = true;
     }
 
     async function loadCardView(uuid) {
@@ -1982,6 +2344,117 @@
       img.src = _cardViewObjectUrl;
     }
 
+    async function loadDeletedGallery() {
+      _deletedGalleryLoaded = false;
+      const stateEl = document.getElementById('deletedGalleryState');
+      const gridEl  = document.getElementById('deletedGalleryGrid');
+      stateEl.textContent = 'Wird geladen …';
+      gridEl.innerHTML = '';
+
+      const client = getSupabaseClient();
+      if (!client) { stateEl.textContent = 'Galerie nicht verfügbar'; return; }
+
+      let thumbEntries;
+      try {
+        const { data, error } = await client.storage
+          .from(_runtimeConfig.bucket)
+          .list('front-deleted', { limit: 200, sortBy: { column: 'created_at', order: 'desc' } });
+        if (error) throw error;
+        thumbEntries = (data || []).filter(f => f.name.endsWith('.thumb.jpeg'));
+      } catch {
+        stateEl.textContent = 'Galerie nicht verfügbar';
+        return;
+      }
+
+      if (!thumbEntries.length) { stateEl.textContent = 'Keine gelöschten Karten'; return; }
+
+      stateEl.textContent = '';
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const img = entry.target._galleryImg;
+          if (!img || img.src) return;
+          const key = entry.target._galleryKey;
+          observer.unobserve(entry.target);
+          client.storage.from(_runtimeConfig.bucket).download(key).then(({ data, error }) => {
+            if (error || !data) return;
+            const url = URL.createObjectURL(data);
+            _deletedGalleryObjectUrls.push(url);
+            img.src = url;
+          }).catch(() => {});
+        });
+      }, { rootMargin: '300px' });
+
+      _deletedGalleryObserver = observer;
+
+      for (const entry of thumbEntries) {
+        const uuid = entry.name.match(/^kartomat-(.+)\.thumb\.jpeg$/)?.[1];
+        const tile = document.createElement('div');
+        tile.className = 'gallery-tile';
+        const img = document.createElement('img');
+        img.alt = '';
+        tile._galleryImg = img;
+        tile._galleryKey = 'front-deleted/' + entry.name;
+        if (uuid) {
+          tile.style.cursor = 'pointer';
+          tile.addEventListener('click', () => {
+            showScreen('deletedCardView');
+            loadDeletedCardView(uuid);
+          });
+        }
+        tile.appendChild(img);
+        gridEl.appendChild(tile);
+        observer.observe(tile);
+      }
+      _deletedGalleryLoaded = true;
+    }
+
+    async function loadDeletedCardView(uuid) {
+      _deletedCardViewUuid = uuid;
+      _deletedCardViewCreatorId = null;
+      _deletedCardViewIsLocked = false;
+
+      const img = document.getElementById('deletedCardViewImg');
+      img.src = '';
+      const unlockBtn = document.getElementById('deletedCardViewUnlockBtn');
+      const restoreBtn = document.getElementById('deletedCardViewRestoreBtn');
+      unlockBtn.textContent = 'Ersteller entsperren';
+      unlockBtn.disabled = true;
+      restoreBtn.disabled = false;
+
+      const client = getSupabaseClient();
+      if (!client) return;
+
+      const key = 'front-deleted/kartomat-' + uuid + '.jpeg';
+      const { data, error } = await client.storage.from(_runtimeConfig.bucket).download(key);
+      if (error || !data) return;
+      _deletedCardViewObjectUrl = URL.createObjectURL(data);
+      img.src = _deletedCardViewObjectUrl;
+
+      try {
+        const [bundle, lockout] = await Promise.all([
+          fetchDeletedCardBundle(uuid),
+          fetchLockoutList().catch(() => [])
+        ]);
+        const creatorId = bundle && bundle.creatorId ? bundle.creatorId : null;
+        const lockoutList = Array.isArray(lockout) ? lockout : [];
+        _deletedCardViewCreatorId = creatorId;
+
+        if (!creatorId) {
+          unlockBtn.textContent = 'Ersteller unbekannt';
+          unlockBtn.disabled = true;
+        } else if (lockoutList.some(e => e.id === creatorId)) {
+          unlockBtn.textContent = 'Ersteller entsperren';
+          unlockBtn.disabled = false;
+          _deletedCardViewIsLocked = true;
+        } else {
+          unlockBtn.textContent = 'Nicht gesperrt';
+          unlockBtn.disabled = true;
+        }
+      } catch (_) {}
+    }
+
     // ── Init ──
 
     document.getElementById('backBtn').addEventListener('click', () => {
@@ -1991,9 +2464,141 @@
 
     document.getElementById('galleryBtn').addEventListener('click', () => showScreen('gallery'));
     document.getElementById('galleryBackBtn').addEventListener('click', () => showScreen('home'));
-    document.getElementById('cardViewBackBtn').addEventListener('click', () => showScreen('gallery'));
+    document.getElementById('cardViewImg').addEventListener('click', () => showScreen('gallery'));
+    document.getElementById('deletedGalleryBtn').addEventListener('click', () => showScreen('deletedGallery'));
+    document.getElementById('deletedGalleryBackBtn').addEventListener('click', () => showScreen('home'));
+    document.getElementById('deletedCardViewImg').addEventListener('click', () => showScreen('deletedGallery'));
+
+    document.getElementById('deletedCardViewUnlockBtn').addEventListener('click', () => {
+      const creatorId = _deletedCardViewCreatorId;
+      if (!creatorId || !_deletedCardViewIsLocked) return;
+      const btn = document.getElementById('deletedCardViewUnlockBtn');
+      twoTapControl.tap(btn, 'Wirklich entsperren?', async () => {
+        btn.disabled = true;
+        try {
+          await adminRemoveLockout(creatorId);
+          _deletedCardViewIsLocked = false;
+          btn.textContent = 'Nicht gesperrt';
+          btn.disabled = true;
+        } catch (err) {
+          alert('Fehler beim Entsperren: ' + (err.message || err));
+          btn.disabled = false;
+        }
+      });
+    });
+
+    document.getElementById('deletedCardViewRestoreBtn').addEventListener('click', () => {
+      const uuid = _deletedCardViewUuid;
+      if (!uuid) return;
+      const restoreBtn = document.getElementById('deletedCardViewRestoreBtn');
+      const unlockBtn = document.getElementById('deletedCardViewUnlockBtn');
+      twoTapControl.tap(restoreBtn, 'Wirklich wiederherstellen?', async () => {
+        restoreBtn.disabled = true;
+        unlockBtn.disabled = true;
+        try {
+          if (_deletedCardViewIsLocked && _deletedCardViewCreatorId) {
+            await adminRemoveLockout(_deletedCardViewCreatorId);
+          }
+          await adminRestoreCard(uuid);
+          _galleryLoaded = false;
+          _deletedGalleryLoaded = false;
+          showScreen('deletedGallery');
+        } catch (err) {
+          alert('Fehler beim Wiederherstellen: ' + (err.message || err));
+          restoreBtn.disabled = false;
+          unlockBtn.disabled = !(_deletedCardViewCreatorId && _deletedCardViewIsLocked);
+        }
+      });
+    });
     document.getElementById('cardViewDownloadBtn').addEventListener('click', () => {
       if (_cardViewObjectUrl && _cardViewUuid) triggerDownload(_cardViewObjectUrl, 'kartomat-' + _cardViewUuid + '.jpeg');
+    });
+    async function showDeletePanel(uuid) {
+      _deletePanelUuid = uuid;
+      _deletePanelCreatorId = null;
+      const lockBtn = document.getElementById('deleteLockBtn');
+      const onlyBtn = document.getElementById('deleteOnlyBtn');
+      lockBtn.textContent = 'Löschen & sperren';
+      lockBtn.disabled = true;
+      onlyBtn.disabled = false;
+      document.getElementById('deletePanel').removeAttribute('hidden');
+
+      let creatorId = null;
+      let lockoutList = [];
+      try {
+        const [bundle, lockout] = await Promise.all([
+          fetchCardBundle(uuid),
+          fetchLockoutList().catch(() => [])
+        ]);
+        creatorId = (bundle && bundle.creatorId) ? bundle.creatorId : null;
+        lockoutList = Array.isArray(lockout) ? lockout : [];
+      } catch (_) {}
+
+      if (!creatorId) {
+        lockBtn.textContent = 'Ersteller unbekannt';
+        lockBtn.disabled = true;
+      } else if (lockoutList.some(e => e.id === creatorId)) {
+        lockBtn.textContent = 'Schon gesperrt';
+        lockBtn.disabled = true;
+      } else {
+        lockBtn.textContent = 'Löschen & sperren';
+        lockBtn.disabled = false;
+        _deletePanelCreatorId = creatorId;
+      }
+    }
+
+    document.getElementById('deleteLockBtn').addEventListener('click', async () => {
+      const uuid = _deletePanelUuid;
+      const creatorId = _deletePanelCreatorId;
+      if (!uuid || !creatorId) return;
+      const lockBtn = document.getElementById('deleteLockBtn');
+      const onlyBtn = document.getElementById('deleteOnlyBtn');
+      lockBtn.disabled = true;
+      onlyBtn.disabled = true;
+      try {
+        await adminMoveCard(uuid);
+        await adminWriteLockout(creatorId);
+        _galleryLoaded = false;
+        showScreen('gallery');
+      } catch (err) {
+        alert('Fehler beim Löschen: ' + (err.message || err));
+        lockBtn.disabled = false;
+        onlyBtn.disabled = false;
+      }
+    });
+
+    document.getElementById('deleteOnlyBtn').addEventListener('click', async () => {
+      const uuid = _deletePanelUuid;
+      if (!uuid) return;
+      const lockBtn = document.getElementById('deleteLockBtn');
+      const onlyBtn = document.getElementById('deleteOnlyBtn');
+      lockBtn.disabled = true;
+      onlyBtn.disabled = true;
+      try {
+        await adminMoveCard(uuid);
+        _galleryLoaded = false;
+        showScreen('gallery');
+      } catch (err) {
+        alert('Fehler beim Löschen: ' + (err.message || err));
+        lockBtn.disabled = false;
+        onlyBtn.disabled = false;
+      }
+    });
+
+    document.getElementById('deleteCancelBtn').addEventListener('click', () => {
+      document.getElementById('deletePanel').setAttribute('hidden', '');
+      _deletePanelUuid = null;
+      _deletePanelCreatorId = null;
+    });
+
+    document.getElementById('cardViewDeleteBtn').addEventListener('click', () => {
+      const uuid = _cardViewUuid;
+      if (!uuid) return;
+      twoTapControl.tap(
+        document.getElementById('cardViewDeleteBtn'),
+        'Wirklich löschen?',
+        () => { showDeletePanel(uuid); }
+      );
     });
 
     createBtn.addEventListener('click', openPhotoSource);
@@ -2022,7 +2627,8 @@
     });
     document.getElementById('downloadBtn').addEventListener('click', downloadCard);
     document.getElementById('publishBtn').addEventListener('click', () => {
-      twoTapControl.tap(document.getElementById('publishBtn'), 'Bestätigen', publishCard);
+      resetPublishBanner();
+      runPublishCheck();
     });
 
     renderHomeList();
@@ -2032,7 +2638,8 @@
       const DEFAULTS = {
         bucket:  '3600grad-karten-upload-hummelrummel',
         event:   'hummelrummel',
-        tagline: 'Erstelle deine eigene Festivalkarte — schön, schnell, auf deinem Handy.'
+        tagline: 'Erstelle deine eigene Festivalkarte — schön, schnell, auf deinem Handy.',
+        policy:  'Seid rücksichtsvoll.\nAndere Personen sehen deine Karte — kein Sexismus, kein Rassismus, keine Homophobie.'
       };
       const params = new URLSearchParams(location.search);
       const out = {};
@@ -2132,6 +2739,16 @@
 
     document.getElementById('loadingRetryBtn').addEventListener('click', startAssetLoad);
 
+    function applyAdminMode() {
+      document.body.classList.add('admin-active');
+      document.querySelector('.app-name').textContent = '(K)admin';
+      document.getElementById('createBtn').style.display = 'none';
+      document.getElementById('cardList').style.display = 'none';
+      document.getElementById('deletedGalleryBtn').style.display = '';
+      document.getElementById('cardViewDownloadBtn').style.display = 'none';
+      document.getElementById('cardViewDeleteBtn').style.display = '';
+    }
+
     // ── Runtime config resolution ──
     (function () {
       const _CONFIG_KEY = 'kartomat_cfg';
@@ -2139,6 +2756,7 @@
       const qUrl = params.get('url');
       const qKey = params.get('key');
       const qBucket = params.get('bucket');
+      const qAdminKey = params.get('adminkey');
 
       function showConfigError(msg) {
         const el = document.getElementById('nocfgMsg');
@@ -2177,6 +2795,15 @@
             if (cfg && cfg.url && cfg.key && cfg.bucket) _runtimeConfig = cfg;
           }
         } catch (e) {}
+      }
+
+      if (qAdminKey !== null) {
+        _adminMode = true;
+        _adminKey = qAdminKey;
+        if (qUrl === null && qKey === null && qBucket === null) {
+          history.replaceState(null, '', location.pathname);
+        }
+        applyAdminMode();
       }
 
       if (_runtimeConfig) {
