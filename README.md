@@ -86,7 +86,7 @@ Foreign cards show the originating event name in place of the publish tag, and t
 - *Galerie nicht verfügbar* — when the list or download fails.
 Only cards published with the new three-file bundle (`.thumb.jpeg` present) appear in the gallery; legacy JSON-only cards are not shown.
 
-**Card view screen** — a read-only full-screen view of a single published card, opened by tapping a gallery thumbnail. Shows the full-size published preview image. A **Herunterladen** button downloads the full-size JPEG (reusing the already-fetched blob — no extra network request; saved as `kartomat-<uuid>.jpeg`). Tapping the card image returns to the gallery. No editing or re-publishing from this screen.
+**Card view screen** — a read-only full-screen view of a single published card, opened by tapping a gallery thumbnail. Shows the full-size published preview image. A **Herunterladen** button downloads the full-size JPEG (reusing the already-fetched blob — no extra network request; saved as `kartomat-<uuid>.jpeg`). Tapping the card image or any empty area beside the card (the backdrop) returns to the gallery. No editing or re-publishing from this screen.
 
 **Starting a card** — on mobile, tapping **Karte erstellen** shows a chooser (Kamera / Galerie). On desktop, the file picker opens directly. After photo selection the editor opens immediately.
 
@@ -102,7 +102,7 @@ Only cards published with the new three-file bundle (`.thumb.jpeg` present) appe
 
 - **Connection error** — a banner ("Keine Verbindung") appears above the button with an **Erneut versuchen** button. Publishing is blocked until the check succeeds; going offline cannot bypass this.
 - **User is locked out** — a locked-out banner ("Du bist gesperrt") appears. No confirm action is offered — this is a dead end.
-- **User is clear** — a content-policy banner appears (text defaults to a German reminder; overridable via `?policy=`). A **Bestätigen** button completes the upload.
+- **User is clear** — a content-policy banner appears (text defaults to a German reminder; overridable via `?policy=`). A **Bestätigen** button completes the upload; a **Doch nicht** button dismisses the banner and cancels publishing.
 
 **Two-tap confirm** — Zurück uses this pattern when there are unsaved changes (relabels to "Änderungen verwerfen?"). Speichern is two-tap (relabels to "Wirklich?") only when overwriting an already-saved own card; a new card or a foreign-card fork is single-tap. Herunterladen is always single-tap.
 
@@ -213,15 +213,15 @@ Admin mode is activated by opening the app with `?adminkey=<key>` in the URL. Th
 
 ### Deleting a card
 
-In admin mode each card detail view shows a **Löschen** button at the top (instead of Herunterladen). The delete sequence:
+In admin mode each card detail view shows a **Bild löschen und Benutzer sperren** button at the top (instead of Herunterladen). A single tap opens a "Karte löschen" panel with three choices:
 
-1. First tap — a "Wirklich löschen?" two-tap confirm arms.
-2. On confirm — a panel offers two choices: **Nur löschen** and **Löschen & sperren** (plus cancel).
-   - **Nur löschen** — moves the three card files to `front-deleted/`.
-   - **Löschen & sperren** — moves the files and adds the creator's UUID to `lockout.json`. Disabled (shown as **"Schon gesperrt"**) if the creator is already locked; disabled (shown as **"Ersteller unbekannt"**) for legacy cards without a `creatorId`.
-3. The card disappears from the public gallery immediately.
+- **Löschen & sperren** — moves the three card files to `front-deleted/` and adds the creator's UUID to `lockout.json`. Requires a second confirming tap (relabels to **"Wirklich sperren?"**). Disabled (shown as **"Schon gesperrt"**) if the creator is already locked; disabled (shown as **"Ersteller unbekannt"**) for legacy cards without a `creatorId`.
+- **Nur löschen** — moves the three card files to `front-deleted/`. Requires a second confirming tap (relabels to **"Wirklich löschen?"**).
+- **Abbrechen** — closes the panel on a single tap.
 
-Tapping the card image in an admin detail view returns to the gallery (same tap-to-return as normal mode).
+Tapping elsewhere while a destructive button is armed disarms it without committing. The card disappears from the public gallery immediately after deletion.
+
+Tapping the card image or any empty area beside the card (the backdrop) returns to the gallery — even when the delete panel is open.
 
 ### Deleted Gallery
 

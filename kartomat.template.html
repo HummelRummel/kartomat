@@ -525,6 +525,11 @@
       border-color: var(--muted);
     }
 
+    #cardViewDeleteBtn {
+      white-space: normal;
+      line-height: 1.3;
+    }
+
     /* ── Home CTA stack ── */
 
     .home-actions {
@@ -763,7 +768,7 @@
       letter-spacing: .08em;
       margin-bottom: 3px;
     }
-    .publish-banner-text span { color: var(--muted); }
+    .publish-banner-text span { color: var(--muted); white-space: pre-line; }
     .publish-banner-actions { display: flex; gap: 8px; }
     .publish-banner.locked { border-left-color: #e85d4c; }
     .publish-banner.noconn { border-left-color: #b08a3e; }
@@ -924,7 +929,7 @@
   <div id="cardView" class="screen">
     <header class="gallery-header">
       <button class="btn-action" id="cardViewDownloadBtn">Herunterladen</button>
-      <button class="btn-action" id="cardViewDeleteBtn" style="display:none">Löschen</button>
+      <button class="btn-action" id="cardViewDeleteBtn" style="display:none">Bild löschen und Benutzer sperren</button>
     </header>
     <div id="deletePanel" hidden>
       <p class="delete-panel-title">Karte löschen</p>
@@ -1411,7 +1416,7 @@
 
         const dismissBtn = document.createElement('button');
         dismissBtn.className   = 'btn-action';
-        dismissBtn.textContent = '×';
+        dismissBtn.textContent = 'Doch nicht';
         dismissBtn.addEventListener('click', () => { resetPublishBanner(); updatePublishBtn(); });
 
         actionsEl.appendChild(confirmBtn);
@@ -2465,9 +2470,11 @@
     document.getElementById('galleryBtn').addEventListener('click', () => showScreen('gallery'));
     document.getElementById('galleryBackBtn').addEventListener('click', () => showScreen('home'));
     document.getElementById('cardViewImg').addEventListener('click', () => showScreen('gallery'));
+    document.querySelector('#cardView .card-view-body').addEventListener('click', e => { if (e.target === e.currentTarget) showScreen('gallery'); });
     document.getElementById('deletedGalleryBtn').addEventListener('click', () => showScreen('deletedGallery'));
     document.getElementById('deletedGalleryBackBtn').addEventListener('click', () => showScreen('home'));
     document.getElementById('deletedCardViewImg').addEventListener('click', () => showScreen('deletedGallery'));
+    document.querySelector('#deletedCardView .card-view-body').addEventListener('click', e => { if (e.target === e.currentTarget) showScreen('deletedGallery'); });
 
     document.getElementById('deletedCardViewUnlockBtn').addEventListener('click', () => {
       const creatorId = _deletedCardViewCreatorId;
@@ -2547,42 +2554,46 @@
       }
     }
 
-    document.getElementById('deleteLockBtn').addEventListener('click', async () => {
+    document.getElementById('deleteLockBtn').addEventListener('click', () => {
       const uuid = _deletePanelUuid;
       const creatorId = _deletePanelCreatorId;
       if (!uuid || !creatorId) return;
       const lockBtn = document.getElementById('deleteLockBtn');
       const onlyBtn = document.getElementById('deleteOnlyBtn');
-      lockBtn.disabled = true;
-      onlyBtn.disabled = true;
-      try {
-        await adminMoveCard(uuid);
-        await adminWriteLockout(creatorId);
-        _galleryLoaded = false;
-        showScreen('gallery');
-      } catch (err) {
-        alert('Fehler beim Löschen: ' + (err.message || err));
-        lockBtn.disabled = false;
-        onlyBtn.disabled = false;
-      }
+      twoTapControl.tap(lockBtn, 'Wirklich sperren?', async () => {
+        lockBtn.disabled = true;
+        onlyBtn.disabled = true;
+        try {
+          await adminMoveCard(uuid);
+          await adminWriteLockout(creatorId);
+          _galleryLoaded = false;
+          showScreen('gallery');
+        } catch (err) {
+          alert('Fehler beim Löschen: ' + (err.message || err));
+          lockBtn.disabled = false;
+          onlyBtn.disabled = false;
+        }
+      });
     });
 
-    document.getElementById('deleteOnlyBtn').addEventListener('click', async () => {
+    document.getElementById('deleteOnlyBtn').addEventListener('click', () => {
       const uuid = _deletePanelUuid;
       if (!uuid) return;
       const lockBtn = document.getElementById('deleteLockBtn');
       const onlyBtn = document.getElementById('deleteOnlyBtn');
-      lockBtn.disabled = true;
-      onlyBtn.disabled = true;
-      try {
-        await adminMoveCard(uuid);
-        _galleryLoaded = false;
-        showScreen('gallery');
-      } catch (err) {
-        alert('Fehler beim Löschen: ' + (err.message || err));
-        lockBtn.disabled = false;
-        onlyBtn.disabled = false;
-      }
+      twoTapControl.tap(onlyBtn, 'Wirklich löschen?', async () => {
+        lockBtn.disabled = true;
+        onlyBtn.disabled = true;
+        try {
+          await adminMoveCard(uuid);
+          _galleryLoaded = false;
+          showScreen('gallery');
+        } catch (err) {
+          alert('Fehler beim Löschen: ' + (err.message || err));
+          lockBtn.disabled = false;
+          onlyBtn.disabled = false;
+        }
+      });
     });
 
     document.getElementById('deleteCancelBtn').addEventListener('click', () => {
@@ -2594,11 +2605,7 @@
     document.getElementById('cardViewDeleteBtn').addEventListener('click', () => {
       const uuid = _cardViewUuid;
       if (!uuid) return;
-      twoTapControl.tap(
-        document.getElementById('cardViewDeleteBtn'),
-        'Wirklich löschen?',
-        () => { showDeletePanel(uuid); }
-      );
+      showDeletePanel(uuid);
     });
 
     createBtn.addEventListener('click', openPhotoSource);
@@ -2639,7 +2646,7 @@
         bucket:  '3600grad-karten-upload-hummelrummel',
         event:   'hummelrummel',
         tagline: 'Erstelle deine eigene Festivalkarte — schön, schnell, auf deinem Handy.',
-        policy:  'Seid rücksichtsvoll.\nAndere Personen sehen deine Karte — kein Sexismus, kein Rassismus, keine Homophobie.'
+        policy:  'Seid rücksichtsvoll.\nAndere Personen sehen deine Karte.\nkein Sexismus, kein Rassismus, keine Homophobie.'
       };
       const params = new URLSearchParams(location.search);
       const out = {};
