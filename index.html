@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="0e14f1ebd02e">
+  <meta name="build-version" content="de7f0250aa47">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1544,8 +1544,15 @@ if (typeof module !== 'undefined' && module.exports) {
         userScale: state.userScale, offsetXFrac: state.offsetXFrac, offsetYFrac: state.offsetYFrac,
         photo: state.img ? state.img.src : null,
         creatorId: userId,
+        creatorName: getArtistName(),
         referenceJpeg
       };
+    }
+
+    // Compact JSON payload the JPEG comment codec embeds — `n`/`id` match the
+    // shape `readCreatorInfo` expects.
+    function buildCreatorCommentPayload() {
+      return JSON.stringify({ n: getArtistName(), id: userId });
     }
 
     async function publishCard() {
@@ -1574,14 +1581,17 @@ if (typeof module !== 'undefined' && module.exports) {
                   { contentType: 'application/json', upsert: true });
         if (jsonErr) throw jsonErr;
 
-        const previewBlob = await fetch(bundle.referenceJpeg).then(r => r.blob());
+        const creatorPayload = buildCreatorCommentPayload();
+        const rawPreviewBlob = await fetch(bundle.referenceJpeg).then(r => r.blob());
+        const previewBlob = await embedJpegComment(rawPreviewBlob, creatorPayload);
         const { error: previewErr } = await client.storage
           .from(bucket)
           .upload(`front/kartomat-${uuid}.jpeg`, previewBlob,
                   { contentType: 'image/jpeg', upsert: true });
         if (previewErr) throw previewErr;
 
-        const thumbBlob = await fetch(await buildThumbnail(canvas)).then(r => r.blob());
+        const rawThumbBlob = await buildThumbnail(canvas);
+        const thumbBlob = await embedJpegComment(rawThumbBlob, creatorPayload);
         const { error: thumbErr } = await client.storage
           .from(bucket)
           .upload(`front/kartomat-${uuid}.thumb.jpeg`, thumbBlob,
@@ -2338,6 +2348,20 @@ if (typeof module !== 'undefined' && module.exports) {
 
     // ── Save / Download ──
 
+    function blobToDataURL(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    // Quality dropped from the previous 0.82 to target ~60% of the prior
+    // thumbnail bytes at the same dimensions. Produces a blob (not a data
+    // URL) so publishCard can splice a JPEG comment into the bytes; the
+    // locally-stored thumbnail carries no payload — it is always the user's
+    // own card.
     async function buildThumbnail(fullCanvas) {
       const cropped = cropToTrim(fullCanvas);
       const thumbW = 200;
@@ -2346,7 +2370,7 @@ if (typeof module !== 'undefined' && module.exports) {
       thumb.width  = thumbW;
       thumb.height = thumbH;
       thumb.getContext('2d').drawImage(cropped, 0, 0, thumbW, thumbH);
-      return thumb.toDataURL('image/jpeg', 0.82);
+      return new Promise(resolve => thumb.toBlob(resolve, 'image/jpeg', 0.5));
     }
 
     async function persistCard(fullCanvas) {
@@ -2359,7 +2383,7 @@ if (typeof module !== 'undefined' && module.exports) {
       } else if (!state.currentId) {
         state.currentId = crypto.randomUUID();
       }
-      const thumbnail = await buildThumbnail(fullCanvas);
+      const thumbnail = await blobToDataURL(await buildThumbnail(fullCanvas));
       await cardStore.put({
         id:          state.currentId,
         bucket:      _runtimeConfig.bucket,
