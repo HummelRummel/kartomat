@@ -75,9 +75,34 @@
     }
 
     .home-name {
+      background: none;
+      border: none;
+      padding: 0;
+      font: inherit;
       color: var(--muted);
       font-size: 13px;
       margin-bottom: 52px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .home-name:disabled {
+      cursor: default;
+    }
+    .home-name:not(:disabled) {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      padding: 6px 14px;
+      border-radius: 999px;
+    }
+    .home-name-chevron {
+      display: none;
+      font-size: 10px;
+      line-height: 1;
+    }
+    .home-name:not(:disabled) .home-name-chevron {
+      display: inline;
     }
 
     .btn-primary {
@@ -166,6 +191,14 @@
       margin-top: 4px;
     }
     .photo-chooser-cancel:active { color: var(--text); }
+
+    .photo-chooser-btn.switcher-active { font-weight: 700; }
+
+    #collectionSwitcherList {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
     .editor-body {
       flex: 1;
@@ -867,6 +900,14 @@
     </div>
   </div>
 
+  <!-- Collection switcher (reuses the photo-chooser overlay/sheet styling) -->
+  <div id="collectionSwitcher" class="photo-chooser-overlay" style="display:none" role="dialog" aria-modal="true">
+    <div class="photo-chooser-sheet">
+      <div id="collectionSwitcherList"></div>
+      <button class="photo-chooser-cancel" id="switcherCancelBtn">Abbrechen</button>
+    </div>
+  </div>
+
   <!-- Hidden export canvas at full card resolution -->
   <canvas id="exportCanvas" width="803" height="1110" style="display:none"></canvas>
 
@@ -912,7 +953,10 @@
     <div class="slash-accent" id="homeTitle"></div>
     <h1 class="app-name">(K)artomat</h1>
     <p class="app-tagline" id="homeDescription"></p>
-    <p class="home-name" id="homeName"></p>
+    <button type="button" class="home-name" id="homeNameBtn" disabled>
+      <span id="homeNameText"></span>
+      <span class="home-name-chevron" aria-hidden="true">⌄</span>
+    </button>
     <div class="home-actions">
       <button class="btn-action" id="galleryBtn">Galerie</button>
       <button class="btn-action" id="deletedGalleryBtn" style="display:none">Gelöschte Galerie</button>
@@ -2666,6 +2710,7 @@
     // during startup config resolution, before anything renders. Doubles as the
     // offline fallback for collection.json below.
     const KNOWN_COLLECTIONS_KEY = 'kartomat:knownCollections';
+    const ACTIVE_CONFIG_KEY = 'kartomat_cfg';
 
     function _loadKnownCollections() {
       try {
@@ -2693,6 +2738,52 @@
       };
       localStorage.setItem(KNOWN_COLLECTIONS_KEY, JSON.stringify(registry));
     }
+
+    // ── Collection switcher ──
+    // With more than one known collection the home-screen name row becomes a
+    // tappable chip that opens a bottom sheet, reusing the photo-chooser overlay
+    // markup/styling rather than a second overlay pattern.
+
+    function _updateHomeNameChip() {
+      const count = Object.keys(_loadKnownCollections()).length;
+      document.getElementById('homeNameBtn').disabled = count <= 1;
+    }
+
+    function _renderCollectionSwitcherList() {
+      const registry = _loadKnownCollections();
+      const entries = Object.keys(registry).map(bucket => Object.assign({ bucket }, registry[bucket]));
+      entries.sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0));
+      document.getElementById('collectionSwitcherList').innerHTML = entries.map(e => {
+        const isActive = e.bucket === _runtimeConfig.bucket;
+        return `<button type="button" class="photo-chooser-btn${isActive ? ' switcher-active' : ''}" data-bucket="${escapeHtml(e.bucket)}">${escapeHtml(e.name)}${isActive ? ' ✓' : ''}</button>`;
+      }).join('');
+    }
+
+    function openCollectionSwitcher() {
+      _renderCollectionSwitcherList();
+      document.getElementById('collectionSwitcher').style.display = 'flex';
+    }
+
+    function closeCollectionSwitcher() {
+      document.getElementById('collectionSwitcher').style.display = 'none';
+    }
+
+    function selectCollection(bucket) {
+      const entry = _loadKnownCollections()[bucket];
+      if (!entry) return;
+      localStorage.setItem(ACTIVE_CONFIG_KEY, JSON.stringify({ url: entry.url, key: entry.key, bucket: bucket }));
+      location.reload();
+    }
+
+    document.getElementById('homeNameBtn').addEventListener('click', openCollectionSwitcher);
+    document.getElementById('switcherCancelBtn').addEventListener('click', closeCollectionSwitcher);
+    document.getElementById('collectionSwitcherList').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-bucket]');
+      if (btn) selectCollection(btn.dataset.bucket);
+    });
+    document.getElementById('collectionSwitcher').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('collectionSwitcher')) closeCollectionSwitcher();
+    });
 
     // ── Asset loading ──
 
@@ -2766,7 +2857,8 @@
       if (!usedStoredConfig) _upsertKnownCollection(_runtimeConfig.bucket, config);
       document.getElementById('homeTitle').textContent       = config.title;
       document.getElementById('homeDescription').textContent = config.description;
-      document.getElementById('homeName').textContent        = config.name;
+      document.getElementById('homeNameText').textContent    = config.name;
+      _updateHomeNameChip();
       const fontBlobUrl = URL.createObjectURL(fontBlob);
       const face = new FontFace('Nove', 'url(' + fontBlobUrl + ')', { weight: '700', style: 'normal' });
       await face.load();
@@ -2827,7 +2919,7 @@
 
     // ── Runtime config resolution ──
     (function () {
-      const _CONFIG_KEY = 'kartomat_cfg';
+      const _CONFIG_KEY = ACTIVE_CONFIG_KEY;
       const params = new URLSearchParams(location.search);
       const qUrl = params.get('url');
       const qKey = params.get('key');
