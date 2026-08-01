@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="a84adf69d1df">
+  <meta name="build-version" content="e147a6a9ee7b">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2103,7 +2103,9 @@
         const isForeign = c.bucket !== _runtimeConfig?.bucket;
         let badge;
         if (isForeign) {
-          badge = `<span class="badge-foreign">${escapeHtml(c.bucket || 'Unbekannt')}</span>`;
+          const known = c.bucket ? _getKnownCollection(c.bucket) : null;
+          const label = (known && known.name) || c.bucket || 'Unbekannt';
+          badge = `<span class="badge-foreign">${escapeHtml(label)}</span>`;
         } else {
           badge = '<span class="badge-draft">Entwurf</span>';
           if (c.publishedFingerprint) {

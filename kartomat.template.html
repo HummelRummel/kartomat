@@ -2103,7 +2103,9 @@
         const isForeign = c.bucket !== _runtimeConfig?.bucket;
         let badge;
         if (isForeign) {
-          badge = `<span class="badge-foreign">${escapeHtml(c.bucket || 'Unbekannt')}</span>`;
+          const known = c.bucket ? _getKnownCollection(c.bucket) : null;
+          const label = (known && known.name) || c.bucket || 'Unbekannt';
+          badge = `<span class="badge-foreign">${escapeHtml(label)}</span>`;
         } else {
           badge = '<span class="badge-draft">Entwurf</span>';
           if (c.publishedFingerprint) {
