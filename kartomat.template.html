@@ -55,6 +55,25 @@
       margin-bottom: 36px;
       text-transform: uppercase;
     }
+    button.slash-accent {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: default;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button.slash-accent:not(:disabled) {
+      cursor: pointer;
+    }
+    .slash-accent-chevron {
+      display: none;
+      font-size: 10px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    button.slash-accent:not(:disabled) .slash-accent-chevron {
+      display: inline;
+    }
 
     .app-name {
       font-family: 'Nove', system-ui, sans-serif;
@@ -72,37 +91,6 @@
       line-height: 1.55;
       max-width: 300px;
       margin-bottom: 8px;
-    }
-
-    .home-name {
-      background: none;
-      border: none;
-      padding: 0;
-      font: inherit;
-      color: var(--muted);
-      font-size: 13px;
-      margin-bottom: 52px;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .home-name:disabled {
-      cursor: default;
-    }
-    .home-name:not(:disabled) {
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--surface);
-      padding: 6px 14px;
-      border-radius: 999px;
-    }
-    .home-name-chevron {
-      display: none;
-      font-size: 10px;
-      line-height: 1;
-    }
-    .home-name:not(:disabled) .home-name-chevron {
-      display: inline;
     }
 
     .btn-primary {
@@ -951,13 +939,12 @@
 
   <!-- ── Home ── -->
   <div id="home" class="screen">
-    <div class="slash-accent" id="homeTitle"></div>
+    <button type="button" class="slash-accent" id="homeTitle" disabled>
+      <span id="homeTitleText"></span>
+      <span class="slash-accent-chevron" aria-hidden="true">⌄</span>
+    </button>
     <h1 class="app-name">(K)artomat</h1>
     <p class="app-tagline" id="homeDescription"></p>
-    <button type="button" class="home-name" id="homeNameBtn" disabled>
-      <span id="homeNameText"></span>
-      <span class="home-name-chevron" aria-hidden="true">⌄</span>
-    </button>
     <div class="home-actions">
       <button class="btn-action" id="galleryBtn">Galerie</button>
       <button class="btn-action" id="deletedGalleryBtn" style="display:none">Gelöschte Galerie</button>
@@ -2744,14 +2731,17 @@
       localStorage.setItem(KNOWN_COLLECTIONS_KEY, JSON.stringify(registry));
     }
 
-    // ── Collection switcher ──
-    // With more than one known collection the home-screen name row becomes a
-    // tappable chip that opens a bottom sheet, reusing the photo-chooser overlay
-    // markup/styling rather than a second overlay pattern.
+    // ── Collection title module ──
+    // Single entry point for every collection-title surface (today: the home
+    // title; later slices add the per-screen bars through this same function).
+    // Given the current config and the known-collection count, it renders the
+    // label and drives the tap affordance — enabled only once more than one
+    // collection is known — rather than introducing a second mechanism.
 
-    function _updateHomeNameChip() {
-      const count = Object.keys(_loadKnownCollections()).length;
-      document.getElementById('homeNameBtn').disabled = count <= 1;
+    function _updateCollectionTitle(config, count) {
+      const homeTitle = document.getElementById('homeTitle');
+      document.getElementById('homeTitleText').textContent = config.title;
+      homeTitle.disabled = count <= 1;
     }
 
     function _renderCollectionSwitcherList() {
@@ -2780,7 +2770,7 @@
       location.reload();
     }
 
-    document.getElementById('homeNameBtn').addEventListener('click', openCollectionSwitcher);
+    document.getElementById('homeTitle').addEventListener('click', openCollectionSwitcher);
     document.getElementById('switcherCancelBtn').addEventListener('click', closeCollectionSwitcher);
     document.getElementById('collectionSwitcherList').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-bucket]');
@@ -2860,10 +2850,8 @@
       // Only a live, successful fetch counts as re-opening the collection — a
       // fallback to the stored copy leaves its entry (and last-used timestamp) as is.
       if (!usedStoredConfig) _upsertKnownCollection(_runtimeConfig.bucket, config);
-      document.getElementById('homeTitle').textContent       = config.title;
       document.getElementById('homeDescription').textContent = config.description;
-      document.getElementById('homeNameText').textContent    = config.name;
-      _updateHomeNameChip();
+      _updateCollectionTitle(config, Object.keys(_loadKnownCollections()).length);
       const fontBlobUrl = URL.createObjectURL(fontBlob);
       const face = new FontFace('Nove', 'url(' + fontBlobUrl + ')', { weight: '700', style: 'normal' });
       await face.load();
