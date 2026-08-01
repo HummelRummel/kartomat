@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="de7f0250aa47">
+  <meta name="build-version" content="7f752dd420a9">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -712,6 +712,11 @@
       gap: 8px;
     }
 
+    .gallery-cell {
+      display: flex;
+      flex-direction: column;
+    }
+
     .gallery-tile {
       aspect-ratio: 735 / 1042;
       background: var(--surface);
@@ -724,6 +729,21 @@
       height: 100%;
       object-fit: cover;
       display: block;
+    }
+
+    .gallery-caption {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      line-height: 14px;
+      height: 14px;
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* ── Card View screen ── */
@@ -2704,13 +2724,16 @@ if (typeof module !== 'undefined' && module.exports) {
           if (!entry.isIntersecting) return;
           const img = entry.target._galleryImg;
           if (!img || img.src) return;
+          const caption = entry.target._galleryCaption;
           const key = entry.target._galleryKey;
           observer.unobserve(entry.target);
-          client.storage.from(_runtimeConfig.bucket).download(key).then(({ data, error }) => {
+          client.storage.from(_runtimeConfig.bucket).download(key).then(async ({ data, error }) => {
             if (error || !data) return;
             const url = URL.createObjectURL(data);
             _galleryObjectUrls.push(url);
             img.src = url;
+            const info = await readCreatorInfo(data).catch(() => null);
+            caption.textContent = (info && info.creatorName) || 'Unbekannt';
           }).catch(() => {});
         });
       }, { rootMargin: '300px' });
@@ -2719,22 +2742,29 @@ if (typeof module !== 'undefined' && module.exports) {
 
       for (const entry of thumbEntries) {
         const uuid = entry.name.match(/^kartomat-(.+)\.thumb\.jpeg$/)?.[1];
+        const cell = document.createElement('div');
+        cell.className = 'gallery-cell';
         const tile = document.createElement('div');
         tile.className = 'gallery-tile';
         const img = document.createElement('img');
         img.alt = '';
-        tile._galleryImg = img;
-        tile._galleryKey = 'front/' + entry.name;
+        const caption = document.createElement('div');
+        caption.className = 'gallery-caption';
+        cell._galleryImg = img;
+        cell._galleryCaption = caption;
+        cell._galleryKey = 'front/' + entry.name;
         if (uuid) {
-          tile.style.cursor = 'pointer';
-          tile.addEventListener('click', () => {
+          cell.style.cursor = 'pointer';
+          cell.addEventListener('click', () => {
             showScreen('cardView');
             loadCardView(uuid);
           });
         }
         tile.appendChild(img);
-        gridEl.appendChild(tile);
-        observer.observe(tile);
+        cell.appendChild(tile);
+        cell.appendChild(caption);
+        gridEl.appendChild(cell);
+        observer.observe(cell);
       }
       _galleryLoaded = true;
     }
@@ -2783,13 +2813,16 @@ if (typeof module !== 'undefined' && module.exports) {
           if (!entry.isIntersecting) return;
           const img = entry.target._galleryImg;
           if (!img || img.src) return;
+          const caption = entry.target._galleryCaption;
           const key = entry.target._galleryKey;
           observer.unobserve(entry.target);
-          client.storage.from(_runtimeConfig.bucket).download(key).then(({ data, error }) => {
+          client.storage.from(_runtimeConfig.bucket).download(key).then(async ({ data, error }) => {
             if (error || !data) return;
             const url = URL.createObjectURL(data);
             _deletedGalleryObjectUrls.push(url);
             img.src = url;
+            const info = await readCreatorInfo(data).catch(() => null);
+            caption.textContent = (info && info.creatorName) || 'Unbekannt';
           }).catch(() => {});
         });
       }, { rootMargin: '300px' });
@@ -2798,22 +2831,29 @@ if (typeof module !== 'undefined' && module.exports) {
 
       for (const entry of thumbEntries) {
         const uuid = entry.name.match(/^kartomat-(.+)\.thumb\.jpeg$/)?.[1];
+        const cell = document.createElement('div');
+        cell.className = 'gallery-cell';
         const tile = document.createElement('div');
         tile.className = 'gallery-tile';
         const img = document.createElement('img');
         img.alt = '';
-        tile._galleryImg = img;
-        tile._galleryKey = 'front-deleted/' + entry.name;
+        const caption = document.createElement('div');
+        caption.className = 'gallery-caption';
+        cell._galleryImg = img;
+        cell._galleryCaption = caption;
+        cell._galleryKey = 'front-deleted/' + entry.name;
         if (uuid) {
-          tile.style.cursor = 'pointer';
-          tile.addEventListener('click', () => {
+          cell.style.cursor = 'pointer';
+          cell.addEventListener('click', () => {
             showScreen('deletedCardView');
             loadDeletedCardView(uuid);
           });
         }
         tile.appendChild(img);
-        gridEl.appendChild(tile);
-        observer.observe(tile);
+        cell.appendChild(tile);
+        cell.appendChild(caption);
+        gridEl.appendChild(cell);
+        observer.observe(cell);
       }
       _deletedGalleryLoaded = true;
     }
