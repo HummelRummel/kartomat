@@ -52,7 +52,7 @@ The built `index.html` carries no credentials. Pass the Supabase project URL, an
 | `url` | Supabase project URL, e.g. `https://<project>.supabase.co` |
 | `key` | Supabase anon key |
 | `bucket` | Storage bucket name |
-| `adminkey` | Supabase admin key with write access to `lockout.json` and move/delete rights on the card bucket. Activates ephemeral admin mode — not persisted to localStorage; any reload ends admin mode. See [Admin mode](#admin-mode). |
+| `adminkey` | Supabase admin key with write access to `lockout.json` and move/delete rights on the card bucket. Activates admin mode and persists the key and the mode to `localStorage`, so both survive reloads, collection switches, and closing the app. See [Admin mode](#admin-mode). |
 
 `url`, `key`, and `bucket` must appear together in one link; omitting any triggers a configuration error. All customisable text (headline, description, collection name, content-policy) now lives in [`collection.json`](#collection-configuration-collectionjson) instead of the URL.
 
@@ -81,9 +81,9 @@ All fields are optional; each falls back to a built-in default when omitted:
 
 | Field | Description |
 |---|---|
-| `title` | Home-screen top line (previously the `?event=` parameter). |
+| `title` | Home-screen top line, and the home screen's collection picker (previously the `?event=` parameter). |
 | `description` | The line under the app name (previously the `?tagline=` parameter). |
-| `name` | Short display name used in the [collection switcher](#flow) and on foreign-card badges. |
+| `name` | Short display name shown in the [per-screen collection bar](#flow), the [collection switcher](#flow), and on foreign-card badges. |
 | `policy` | Publish content-policy text (previously the `?policy=` parameter). First line renders as the bold banner title, remaining lines as the muted body. |
 
 **Example** (also in [`collection.json`](collection.json) at the repo root):
@@ -118,15 +118,16 @@ the app refuses to start.
 
 ## Flow
 
-**Home screen** — shows the app name, a headline and description sourced from
-[`collection.json`](#collection-configuration-collectionjson), a secondary **Galerie** button, and the
+**Home screen** — the collection's `title` (from [`collection.json`](#collection-configuration-collectionjson))
+is the decorative top line, and doubles as the collection picker: plain muted text when the device
+knows only one collection, or the same text with a chevron once it knows more than one. Tapping it
+opens a bottom-sheet picker (reusing the photo-chooser overlay's markup and styling) listing every
+known collection by display name, most recently used first, with the active one marked; picking one
+writes it as the active config and reloads the page into it. Below the title, a headline and
+description are sourced from `collection.json`, followed by a secondary **Galerie** button and the
 primary **Karte erstellen** button (Galerie is placed above Karte erstellen, in outlined style so
-creating remains the primary call-to-action). Below the description, a name row shows the collection's
-display name: plain muted text when the device knows only one collection, or a tappable chip with a
-chevron once it knows more than one. Tapping the chip opens a bottom-sheet picker (reusing the
-photo-chooser overlay's markup and styling) listing every known collection by display name, most
-recently used first, with the active one marked; picking one writes it as the active config and
-reloads the page into it. Below the buttons, cards appear as thumbnails. Own cards (belonging to the
+creating remains the primary call-to-action). There is no separate collection control below the
+description — the title is the only picker. Below the buttons, cards appear as thumbnails. Own cards (belonging to the
 current bucket) are listed first; foreign cards (from other buckets) appear below. Publish tags apply
 to own cards:
 - **Veröffentlicht** — card is published and unchanged since publish.
@@ -136,6 +137,12 @@ to own cards:
 Foreign cards show the originating collection's display name in place of the publish tag — falling
 back to the raw bucket name, or "Unbekannt" for records with no bucket at all — and their thumbnail is
 shown at 50% opacity.
+
+**Collection bar** — every other screen (gallery, card view, deleted gallery, deleted card view, and
+editor) shows a slim bar above its existing header, displaying the collection's short `name`. Tapping
+it opens the same bottom-sheet picker as the home title, with one exception: the editor's bar is
+never tappable, so an in-progress card can't be discarded by an accidental tap. Like the home title,
+the bar is plain text with no chevron until the device knows more than one collection.
 
 **Gallery screen** — a full-screen grid of published cards, newest first, fetched from Supabase Storage (up to 200 cards). A **Zurück** button at the top returns to the home screen. When returning from a card view, scroll position is restored instantly with no refetch. The grid has three states:
 - *Wird geladen …* — while thumbnails are being fetched.
@@ -211,6 +218,8 @@ predating the `bucket` field.
 | `kartomat:knownCollections` | Every collection this device has successfully opened, keyed by bucket: connection details, the four resolved `collection.json` fields, and a last-used timestamp. Written only once both the assets and `collection.json` have loaded successfully; also serves as the offline fallback for `collection.json`. Feeds the [collection switcher](#flow). |
 | `kartomat:userId` | The anonymous per-device UUID — see [User identity](#user-identity). |
 | `kartomat:etag:<url>` | Cached asset validator used to detect a changed background/font. |
+| `kartomat:adminKey` | The admin key, once supplied via `?adminkey=`. Collection-independent — one key works across every collection — and kept on logout, so the [entry gesture](#admin-mode) can use it again. |
+| `kartomat:adminActive` | The on/off flag for admin mode. Consulted on every start; survives reloads, collection switches, and closing the app until explicit logout clears it. |
 
 The retired `kartomat:event`, `kartomat:tagline`, `kartomat:policy` keys and a dead `kartomat:bucket`
 entry (which collided in name with the real connection parameter but was never read) are removed via
@@ -291,7 +300,35 @@ Deleted cards are moved (not erased) to the `front-deleted/` prefix in the **car
 
 ## Admin mode
 
-Admin mode is activated by opening the app with `?adminkey=<key>` in the URL. The key is held in memory only and stripped from the visible URL bar — any reload ends admin mode. Re-entry requires opening the admin link again.
+Admin mode is a persisted mode, not an ephemeral one: the key and the on/off flag both survive
+reloads, collection switches, and closing the app, so an admin can move freely between collections
+without losing their session.
+
+### Entry
+
+- **Admin link** — opening the app with `?adminkey=<key>` in the URL persists the key, turns the flag
+  on, strips the parameter from the visible URL bar, and applies admin mode immediately.
+- **Triple-tap** — once a key has been stored on a device, tapping the `(K)artomat` / `(K)admin`
+  heading three times within a short window re-enters admin mode without the link. With no stored
+  key the gesture is a complete no-op — no message, no hint — so an ordinary visitor can never
+  discover that admin mode exists.
+
+Both paths take effect via the same mechanism: persist the new flag, then reload. This is the same
+persist-then-reload pattern collection switching already uses, and it is the only code path that
+builds the admin interface — there is no separate in-place teardown/setup.
+
+### Exit
+
+Tapping **Abmelden**, in the red admin banner on every screen, clears the on/off flag but **keeps the
+stored key**, then reloads back to normal mode. The triple-tap gesture can therefore re-enter admin
+mode afterwards without the original link.
+
+### Security note
+
+An admin session now outlives the app being closed — a real trade-off against the previous design,
+where any reload ended admin mode and limited the damage from a forgotten session on a shared device.
+The explicit **Abmelden** control is the compensating measure: use it when handing a device to someone
+else.
 
 ### Visibility
 
