@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="eed50c40bcb1">
+  <meta name="build-version" content="6e393eb00faa">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -275,6 +275,38 @@
       line-height: 1.5;
       white-space: pre-line;
       margin: 4px 4px 0;
+    }
+
+    /* ── Admin settings sheet ── */
+
+    .settings-sheet {
+      max-height: min(85vh, 640px);
+      overflow-y: auto;
+    }
+
+    #adminSettingsSheet .btn-action.armed { font-weight: 700; }
+
+    .settings-textarea {
+      background: #2a2a2a;
+      color: var(--text);
+      border: none;
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.4;
+      resize: vertical;
+      min-height: 64px;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .settings-textarea:focus { outline: 2px solid var(--muted); outline-offset: -2px; }
+
+    .settings-error {
+      color: #e85d4c;
+      font-size: 13px;
+      line-height: 1.4;
+      margin: 0;
     }
 
     .photo-chooser-cancel {
@@ -1083,6 +1115,22 @@
     </div>
   </div>
 
+  <!-- Admin settings sheet (reuses the photo-chooser overlay/sheet styling) -->
+  <div id="adminSettingsSheet" class="photo-chooser-overlay" style="display:none" role="dialog" aria-modal="true">
+    <div class="photo-chooser-sheet settings-sheet">
+      <button type="button" class="btn-action settings-toggle" id="settingsFestivalModeBtn" data-flag="festival_mode" aria-pressed="false">Festival-Modus</button>
+      <button type="button" class="btn-action settings-toggle" id="settingsDisableGalleryBtn" data-flag="disable_gallery" aria-pressed="false">Galerie sperren</button>
+      <label class="kuenstlername-label" for="settingsDisableGalleryStatement">Hinweistext – Galerie gesperrt</label>
+      <textarea id="settingsDisableGalleryStatement" class="settings-textarea" rows="3" placeholder="Leer = Standardtext"></textarea>
+      <button type="button" class="btn-action settings-toggle" id="settingsDisablePublishBtn" data-flag="disable_publish" aria-pressed="false">Veröffentlichen sperren</button>
+      <label class="kuenstlername-label" for="settingsDisablePublishStatement">Hinweistext – Veröffentlichen gesperrt</label>
+      <textarea id="settingsDisablePublishStatement" class="settings-textarea" rows="3" placeholder="Leer = Standardtext"></textarea>
+      <p class="settings-error" id="settingsError" style="display:none"></p>
+      <button type="button" class="photo-chooser-btn" id="settingsSaveBtn">Speichern</button>
+      <button type="button" class="photo-chooser-cancel" id="settingsCancelBtn">Abbrechen</button>
+    </div>
+  </div>
+
   <!-- Hidden export canvas at full card resolution -->
   <canvas id="exportCanvas" width="803" height="1110" style="display:none"></canvas>
 
@@ -1137,6 +1185,7 @@
     <div class="home-actions">
       <button class="btn-action" id="galleryBtn">Galerie</button>
       <button class="btn-action" id="deletedGalleryBtn" style="display:none">Gelöschte Galerie</button>
+      <button class="btn-action" id="adminSettingsBtn" style="display:none">Einstellungen</button>
       <button class="btn-primary" id="createBtn">Karte erstellen</button>
     </div>
     <div id="cardList" class="card-list"></div>
@@ -3256,6 +3305,18 @@ if (typeof module !== 'undefined' && module.exports) {
     // ── Collection configuration (collection.json) ──
     let config = null;
 
+    // The two statement fields as actually stored (blank when the field is
+    // absent or whitespace-only), kept separately from the resolved `config`
+    // above so the admin settings sheet can prefill a blank field rather than
+    // the built-in default text — resolveCollectionFlags() only ever exposes
+    // the resolved value, never whether the source field was present.
+    let _rawFlagStatements = { disable_gallery_statement: '', disable_publish_statement: '' };
+
+    function _rawStatementOrBlank(source, key) {
+      const v = source ? source[key] : undefined;
+      return (typeof v === 'string' && v.trim() !== '') ? v : '';
+    }
+
     const COLLECTION_CONFIG_DEFAULTS = Object.assign({
       title:       'hummelrummel',
       description: 'Erstelle deine eigene Sammelkarte\n\nDie besten werden beim nächsten Festival real',
@@ -3523,6 +3584,105 @@ if (typeof module !== 'undefined' && module.exports) {
       if (e.target === galleryDisabledSheet) closeGalleryDisabledSheet();
     });
 
+    // ── Admin settings sheet ──
+    // Opened only from the admin-only home button (applyAdminMode reveals it,
+    // the same mechanism as deletedGalleryBtn). Toggles are two-state buttons
+    // built from the existing action-button/armed-state styling rather than a
+    // new switch control; the statements are the app's first textareas. One
+    // save writes all five values in a single request through issue 004's
+    // adminWriteCollectionFlags — on success the sheet closes (that routine
+    // already updates the live `config`); on failure a visible error is shown
+    // here and the sheet stays open with nothing lost.
+
+    const adminSettingsSheet = document.getElementById('adminSettingsSheet');
+    const settingsToggleBtns = Array.from(document.querySelectorAll('#adminSettingsSheet .settings-toggle'));
+    const settingsDisableGalleryStatement = document.getElementById('settingsDisableGalleryStatement');
+    const settingsDisablePublishStatement = document.getElementById('settingsDisablePublishStatement');
+    const settingsError   = document.getElementById('settingsError');
+    const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+    const settingsCancelBtn = document.getElementById('settingsCancelBtn');
+
+    const SETTINGS_TOGGLE_LABELS = {
+      festival_mode:    'Festival-Modus',
+      disable_gallery:  'Galerie sperren',
+      disable_publish:  'Veröffentlichen sperren'
+    };
+
+    let _settingsState = null;
+
+    function _renderSettingsToggle(btn) {
+      const flag = btn.dataset.flag;
+      const on = !!_settingsState[flag];
+      btn.classList.toggle('armed', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.textContent = (on ? '✓ ' : '') + SETTINGS_TOGGLE_LABELS[flag];
+    }
+
+    function openAdminSettingsSheet() {
+      settingsError.style.display = 'none';
+      settingsError.textContent = '';
+      _settingsState = {
+        festival_mode:   !!config.festival_mode,
+        disable_gallery: !!config.disable_gallery,
+        disable_publish: !!config.disable_publish
+      };
+      settingsToggleBtns.forEach(_renderSettingsToggle);
+      settingsDisableGalleryStatement.value = _rawFlagStatements.disable_gallery_statement;
+      settingsDisablePublishStatement.value = _rawFlagStatements.disable_publish_statement;
+      adminSettingsSheet.style.display = 'flex';
+    }
+
+    function closeAdminSettingsSheet() {
+      adminSettingsSheet.style.display = 'none';
+    }
+
+    settingsToggleBtns.forEach(btn => btn.addEventListener('click', () => {
+      const flag = btn.dataset.flag;
+      _settingsState[flag] = !_settingsState[flag];
+      _renderSettingsToggle(btn);
+    }));
+
+    settingsSaveBtn.addEventListener('click', async () => {
+      // A blank statement is written as absent (an explicit `undefined` patch
+      // value, still `hasOwnProperty`-owned) so the built-in default applies,
+      // rather than persisting the default text into the file.
+      const galleryStatement = settingsDisableGalleryStatement.value;
+      const publishStatement = settingsDisablePublishStatement.value;
+      const patch = {
+        festival_mode:   _settingsState.festival_mode,
+        disable_gallery: _settingsState.disable_gallery,
+        disable_publish: _settingsState.disable_publish,
+        disable_gallery_statement: galleryStatement.trim() === '' ? undefined : galleryStatement,
+        disable_publish_statement: publishStatement.trim() === '' ? undefined : publishStatement
+      };
+      settingsError.style.display = 'none';
+      settingsSaveBtn.disabled = true;
+      settingsCancelBtn.disabled = true;
+      const originalLabel = settingsSaveBtn.textContent;
+      settingsSaveBtn.textContent = 'Speichert…';
+      try {
+        await adminWriteCollectionFlags(patch);
+        _rawFlagStatements = {
+          disable_gallery_statement: typeof patch.disable_gallery_statement === 'string' ? patch.disable_gallery_statement : '',
+          disable_publish_statement: typeof patch.disable_publish_statement === 'string' ? patch.disable_publish_statement : ''
+        };
+        closeAdminSettingsSheet();
+      } catch (e) {
+        settingsError.textContent = 'Speichern fehlgeschlagen: ' + e.message;
+        settingsError.style.display = '';
+      } finally {
+        settingsSaveBtn.disabled = false;
+        settingsCancelBtn.disabled = false;
+        settingsSaveBtn.textContent = originalLabel;
+      }
+    });
+
+    settingsCancelBtn.addEventListener('click', closeAdminSettingsSheet);
+    adminSettingsSheet.addEventListener('click', (e) => {
+      if (e.target === adminSettingsSheet) closeAdminSettingsSheet();
+    });
+    document.getElementById('adminSettingsBtn').addEventListener('click', openAdminSettingsSheet);
+
     // ── Admin entry gesture ──
     // Three taps within a short window on the app-name heading. With no
     // stored admin key this is a complete no-op — no visible response of
@@ -3621,6 +3781,10 @@ if (typeof module !== 'undefined' && module.exports) {
         name:        collectionJson.name        ?? COLLECTION_CONFIG_DEFAULTS.name,
         policy:      collectionJson.policy      ?? COLLECTION_CONFIG_DEFAULTS.policy
       }, resolveCollectionFlags(collectionJson));
+      _rawFlagStatements = {
+        disable_gallery_statement: _rawStatementOrBlank(collectionJson, 'disable_gallery_statement'),
+        disable_publish_statement: _rawStatementOrBlank(collectionJson, 'disable_publish_statement')
+      };
       // Only a live, successful fetch counts as re-opening the collection — a
       // fallback to the stored copy leaves its entry (and last-used timestamp) as is.
       if (!usedStoredConfig) _upsertKnownCollection(_runtimeConfig.bucket, config);
@@ -3704,6 +3868,7 @@ if (typeof module !== 'undefined' && module.exports) {
       document.getElementById('cardList').style.display = 'none';
       document.getElementById('kuenstlernameBar').style.display = 'none';
       document.getElementById('deletedGalleryBtn').style.display = '';
+      document.getElementById('adminSettingsBtn').style.display = '';
       document.getElementById('cardViewDownloadBtn').style.display = 'none';
       document.getElementById('cardViewDeleteBtn').style.display = '';
     }
