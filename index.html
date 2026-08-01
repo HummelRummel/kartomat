@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="f6ac1ff3f296">
+  <meta name="build-version" content="31b8fdea2b28">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -3298,6 +3298,11 @@ if (typeof module !== 'undefined' && module.exports) {
     document.getElementById('publishBtn').addEventListener('click', () => {
       resetPublishBanner();
       startPublishFlow();
+    });
+    document.getElementById('publishBanner').addEventListener('click', (e) => {
+      if (e.target.closest('.publish-banner-actions')) return;
+      resetPublishBanner();
+      updatePublishBtn();
     });
 
     renderHomeList();

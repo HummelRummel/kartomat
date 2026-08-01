@@ -3128,6 +3128,11 @@
       resetPublishBanner();
       startPublishFlow();
     });
+    document.getElementById('publishBanner').addEventListener('click', (e) => {
+      if (e.target.closest('.publish-banner-actions')) return;
+      resetPublishBanner();
+      updatePublishBtn();
+    });
 
     renderHomeList();
 
