@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="cf9511e61c6a">
+  <meta name="build-version" content="f73b43a80824">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1722,7 +1722,8 @@ if (typeof module !== 'undefined' && module.exports) {
       if (type === 'policy') {
         const lines = config.policy.split('\n');
         titleEl.textContent = lines[0];
-        bodyEl.textContent  = lines.slice(1).join('\n');
+        bodyEl.textContent  = lines.slice(1).join('\n') +
+          '\nDein Künstlername wird öffentlich unter deiner Karte angezeigt.';
 
         const confirmBtn = document.createElement('button');
         confirmBtn.className   = 'btn-action btn-action-primary';
@@ -1754,6 +1755,25 @@ if (typeof module !== 'undefined' && module.exports) {
       }
 
       bannerEl.removeAttribute('hidden');
+    }
+
+    // ── Publish gate chain ──
+    // Confirming a gate advances to the next; cancelling anywhere leaves the
+    // editor with nothing published and no upload started. One press of
+    // Veröffentlichen carries the user through the whole chain.
+
+    function startPublishFlow() {
+      // Insertion point: the wrong-collection confirm (separate slice) becomes
+      // the first step here, ahead of the name gate.
+      runNameGate();
+    }
+
+    function runNameGate() {
+      if (getArtistName()) {
+        runPublishCheck();
+        return;
+      }
+      openKuenstlernameSheet({ blocking: true, onSaved: runPublishCheck });
     }
 
     async function runPublishCheck() {
@@ -2962,7 +2982,7 @@ if (typeof module !== 'undefined' && module.exports) {
     document.getElementById('downloadBtn').addEventListener('click', downloadCard);
     document.getElementById('publishBtn').addEventListener('click', () => {
       resetPublishBanner();
-      runPublishCheck();
+      startPublishFlow();
     });
 
     renderHomeList();
@@ -3105,9 +3125,10 @@ if (typeof module !== 'undefined' && module.exports) {
     // gate) suppresses both and takes a continuation callback — opts is
     // threaded through now so that mode drops in without reshaping this.
 
-    const kuenstlernameSheet   = document.getElementById('kuenstlernameSheet');
-    const kuenstlernameInput   = document.getElementById('kuenstlernameInput');
-    const kuenstlernameSaveBtn = document.getElementById('kuenstlernameSaveBtn');
+    const kuenstlernameSheet     = document.getElementById('kuenstlernameSheet');
+    const kuenstlernameInput     = document.getElementById('kuenstlernameInput');
+    const kuenstlernameSaveBtn   = document.getElementById('kuenstlernameSaveBtn');
+    const kuenstlernameCancelBtn = document.getElementById('kuenstlernameCancelBtn');
     let _kuenstlernameOnSaved = null;
 
     function cleanArtistNameInput(raw) {
@@ -3120,9 +3141,11 @@ if (typeof module !== 'undefined' && module.exports) {
 
     function openKuenstlernameSheet(opts) {
       opts = opts || {};
+      const blocking = !!opts.blocking;
       kuenstlernameInput.value = getArtistName() || '';
       updateKuenstlernameSaveBtn();
-      kuenstlernameSheet.dataset.blocking = opts.blocking ? '1' : '0';
+      kuenstlernameSheet.dataset.blocking = blocking ? '1' : '0';
+      kuenstlernameCancelBtn.style.display = blocking ? 'none' : '';
       _kuenstlernameOnSaved = opts.onSaved || null;
       kuenstlernameSheet.style.display = 'flex';
       kuenstlernameInput.focus();
@@ -3149,7 +3172,7 @@ if (typeof module !== 'undefined' && module.exports) {
       if (onSaved) onSaved();
     });
 
-    document.getElementById('kuenstlernameCancelBtn').addEventListener('click', () => {
+    kuenstlernameCancelBtn.addEventListener('click', () => {
       if (kuenstlernameSheet.dataset.blocking === '1') return;
       closeKuenstlernameSheet();
     });
