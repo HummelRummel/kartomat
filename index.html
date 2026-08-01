@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="4273d007b9c5">
+  <meta name="build-version" content="e514aad949a9">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -109,6 +109,44 @@
       -webkit-tap-highlight-color: transparent;
     }
     .btn-primary:active { opacity: .82; }
+
+    /* ── Collection bar ── */
+
+    .collection-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 40px;
+      flex-shrink: 0;
+      padding: 10px 18px;
+      background: var(--bg);
+      border: none;
+      border-bottom: 1px solid var(--divider);
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: center;
+      cursor: default;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .collection-bar:not(:disabled) {
+      cursor: pointer;
+    }
+    .collection-bar-chevron {
+      display: none;
+      font-size: 10px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .collection-bar:not(:disabled) .collection-bar-chevron {
+      display: inline;
+    }
 
     /* ── Editor ── */
 
@@ -955,6 +993,10 @@
 
   <!-- ── Gallery ── -->
   <div id="gallery" class="screen">
+    <button type="button" class="collection-bar" id="galleryCollectionBar" disabled>
+      <span class="collection-bar-text"></span>
+      <span class="collection-bar-chevron" aria-hidden="true">⌄</span>
+    </button>
     <header class="gallery-header">
       <button class="btn-action" id="galleryBackBtn">Zurück</button>
     </header>
@@ -966,6 +1008,10 @@
 
   <!-- ── Card View ── -->
   <div id="cardView" class="screen">
+    <button type="button" class="collection-bar" id="cardViewCollectionBar" disabled>
+      <span class="collection-bar-text"></span>
+      <span class="collection-bar-chevron" aria-hidden="true">⌄</span>
+    </button>
     <header class="gallery-header">
       <button class="btn-action" id="cardViewDownloadBtn">Herunterladen</button>
       <button class="btn-action" id="cardViewDeleteBtn" style="display:none">Löschen und/oder sperren</button>
@@ -984,6 +1030,10 @@
 
   <!-- ── Deleted Gallery ── -->
   <div id="deletedGallery" class="screen">
+    <button type="button" class="collection-bar" id="deletedGalleryCollectionBar" disabled>
+      <span class="collection-bar-text"></span>
+      <span class="collection-bar-chevron" aria-hidden="true">⌄</span>
+    </button>
     <header class="gallery-header">
       <button class="btn-action" id="deletedGalleryBackBtn">Zurück</button>
     </header>
@@ -995,6 +1045,10 @@
 
   <!-- ── Deleted Card View ── -->
   <div id="deletedCardView" class="screen">
+    <button type="button" class="collection-bar" id="deletedCardViewCollectionBar" disabled>
+      <span class="collection-bar-text"></span>
+      <span class="collection-bar-chevron" aria-hidden="true">⌄</span>
+    </button>
     <header class="gallery-header">
       <button class="btn-action" id="deletedCardViewUnlockBtn" disabled>Ersteller entsperren</button>
       <button class="btn-action" id="deletedCardViewRestoreBtn">Wiederherstellen</button>
@@ -1006,6 +1060,9 @@
 
   <!-- ── Editor ── -->
   <div id="editor" class="screen">
+    <button type="button" class="collection-bar" id="editorCollectionBar" data-always-disabled="true" disabled>
+      <span class="collection-bar-text"></span>
+    </button>
     <header class="editor-header">
       <button class="btn-action" id="backBtn">Zurück</button>
       <button class="btn-action" id="changePhotoBtn">Foto ändern</button>
@@ -2732,16 +2789,24 @@
     }
 
     // ── Collection title module ──
-    // Single entry point for every collection-title surface (today: the home
-    // title; later slices add the per-screen bars through this same function).
-    // Given the current config and the known-collection count, it renders the
-    // label and drives the tap affordance — enabled only once more than one
-    // collection is known — rather than introducing a second mechanism.
+    // Single entry point for every collection-title surface: the home title
+    // and every per-screen bar. Given the current config and the known-
+    // collection count, it renders each surface's label and drives its tap
+    // affordance — enabled only once more than one collection is known —
+    // rather than introducing a second code path per surface. Home renders
+    // the long `title`; every bar renders the short `name`. A bar marked
+    // data-always-disabled (the editor's) stays non-tappable regardless of
+    // count, so an in-progress card can't be discarded by an accidental tap.
 
     function _updateCollectionTitle(config, count) {
       const homeTitle = document.getElementById('homeTitle');
       document.getElementById('homeTitleText').textContent = config.title;
       homeTitle.disabled = count <= 1;
+
+      document.querySelectorAll('.collection-bar').forEach(bar => {
+        bar.querySelector('.collection-bar-text').textContent = config.name;
+        if (bar.dataset.alwaysDisabled !== 'true') bar.disabled = count <= 1;
+      });
     }
 
     function _renderCollectionSwitcherList() {
@@ -2771,6 +2836,9 @@
     }
 
     document.getElementById('homeTitle').addEventListener('click', openCollectionSwitcher);
+    ['galleryCollectionBar', 'cardViewCollectionBar', 'deletedGalleryCollectionBar', 'deletedCardViewCollectionBar'].forEach(id => {
+      document.getElementById(id).addEventListener('click', openCollectionSwitcher);
+    });
     document.getElementById('switcherCancelBtn').addEventListener('click', closeCollectionSwitcher);
     document.getElementById('collectionSwitcherList').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-bucket]');
