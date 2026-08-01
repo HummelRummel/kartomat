@@ -1247,6 +1247,10 @@
 
 {jpeg_comment_codec}
 
+    // ── Collection flag resolution ──
+
+{collection_flags}
+
     // ── Screen router ──
 
     let _currentScreen = null;
@@ -3030,12 +3034,12 @@
     // ── Collection configuration (collection.json) ──
     let config = null;
 
-    const COLLECTION_CONFIG_DEFAULTS = {
+    const COLLECTION_CONFIG_DEFAULTS = Object.assign({
       title:       'hummelrummel',
       description: 'Erstelle deine eigene Sammelkarte\n\nDie besten werden beim nächsten Festival real',
       name:        'Hummelrummel',
       policy:      'Seid rücksichtsvoll.\nAndere Personen sehen deine Karte.\nkein Sexismus, kein Rassismus, keine Homophobie.'
-    };
+    }, COLLECTION_FLAG_DEFAULTS);
 
     // ── Known-collections registry ──
     // Every collection this device has successfully opened, keyed by bucket. Read
@@ -3072,6 +3076,11 @@
         description: cfg.description,
         name:        cfg.name,
         policy:      cfg.policy,
+        festival_mode:              cfg.festival_mode,
+        disable_gallery:            cfg.disable_gallery,
+        disable_gallery_statement:  cfg.disable_gallery_statement,
+        disable_publish:            cfg.disable_publish,
+        disable_publish_statement:  cfg.disable_publish_statement,
         lastUsed:    Date.now()
       };
       localStorage.setItem(KNOWN_COLLECTIONS_KEY, JSON.stringify(registry));
@@ -3321,12 +3330,12 @@
       _saveEtag(bgUrl, bgRes);
       _saveEtag(fontUrl, fontRes);
       const [bgBlob, fontBlob] = await Promise.all([bgRes.blob(), fontRes.blob()]);
-      config = {
+      config = Object.assign({
         title:       collectionJson.title       ?? COLLECTION_CONFIG_DEFAULTS.title,
         description: collectionJson.description ?? COLLECTION_CONFIG_DEFAULTS.description,
         name:        collectionJson.name        ?? COLLECTION_CONFIG_DEFAULTS.name,
         policy:      collectionJson.policy      ?? COLLECTION_CONFIG_DEFAULTS.policy
-      };
+      }, resolveCollectionFlags(collectionJson));
       // Only a live, successful fetch counts as re-opening the collection — a
       // fallback to the stored copy leaves its entry (and last-used timestamp) as is.
       if (!usedStoredConfig) _upsertKnownCollection(_runtimeConfig.bucket, config);

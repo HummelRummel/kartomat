@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="0016fc369c52">
+  <meta name="build-version" content="945231811056">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1335,6 +1335,59 @@ if (typeof module !== 'undefined' && module.exports) {
     readJpegComment,
     readCreatorInfo,
     MAX_COMMENT_PAYLOAD_BYTES
+  };
+}
+
+
+    // ── Collection flag resolution ──
+
+// Collection flag resolution — given a parsed collection.json config object,
+// returns the five festival/gallery/publish fields with defaults and
+// statement fallbacks applied. Total over every input: a null, non-object, or
+// array config resolves to the full default set rather than throwing, and
+// each field is resolved independently so one bad field can't take the rest
+// down with it.
+
+const DISABLE_GALLERY_STATEMENT_DEFAULT = 'Die Galerie ist derzeit geschlossen.';
+const DISABLE_PUBLISH_STATEMENT_DEFAULT = 'Das Veröffentlichen ist derzeit nicht möglich.';
+
+const COLLECTION_FLAG_DEFAULTS = {
+  festival_mode: false,
+  disable_gallery: false,
+  disable_gallery_statement: DISABLE_GALLERY_STATEMENT_DEFAULT,
+  disable_publish: false,
+  disable_publish_statement: DISABLE_PUBLISH_STATEMENT_DEFAULT
+};
+
+// A non-boolean flag value is rejected rather than coerced — an arbitrary
+// truthy value (a string, a number) does not turn the flag on. Only the
+// literal `true`/`false` are meaningful; anything else falls back to default.
+function _resolveFlag(value, fallback) {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+// An empty or whitespace-only statement counts as absent, so hand-clearing
+// the field in the dashboard falls back to the default rather than showing
+// a blank box.
+function _resolveStatement(value, fallback) {
+  return (typeof value === 'string' && value.trim() !== '') ? value : fallback;
+}
+
+function resolveCollectionFlags(config) {
+  const cfg = (config && typeof config === 'object' && !Array.isArray(config)) ? config : {};
+  return {
+    festival_mode: _resolveFlag(cfg.festival_mode, COLLECTION_FLAG_DEFAULTS.festival_mode),
+    disable_gallery: _resolveFlag(cfg.disable_gallery, COLLECTION_FLAG_DEFAULTS.disable_gallery),
+    disable_gallery_statement: _resolveStatement(cfg.disable_gallery_statement, COLLECTION_FLAG_DEFAULTS.disable_gallery_statement),
+    disable_publish: _resolveFlag(cfg.disable_publish, COLLECTION_FLAG_DEFAULTS.disable_publish),
+    disable_publish_statement: _resolveStatement(cfg.disable_publish_statement, COLLECTION_FLAG_DEFAULTS.disable_publish_statement)
+  };
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    resolveCollectionFlags,
+    COLLECTION_FLAG_DEFAULTS
   };
 }
 
@@ -3122,12 +3175,12 @@ if (typeof module !== 'undefined' && module.exports) {
     // ── Collection configuration (collection.json) ──
     let config = null;
 
-    const COLLECTION_CONFIG_DEFAULTS = {
+    const COLLECTION_CONFIG_DEFAULTS = Object.assign({
       title:       'hummelrummel',
       description: 'Erstelle deine eigene Sammelkarte\n\nDie besten werden beim nächsten Festival real',
       name:        'Hummelrummel',
       policy:      'Seid rücksichtsvoll.\nAndere Personen sehen deine Karte.\nkein Sexismus, kein Rassismus, keine Homophobie.'
-    };
+    }, COLLECTION_FLAG_DEFAULTS);
 
     // ── Known-collections registry ──
     // Every collection this device has successfully opened, keyed by bucket. Read
@@ -3164,6 +3217,11 @@ if (typeof module !== 'undefined' && module.exports) {
         description: cfg.description,
         name:        cfg.name,
         policy:      cfg.policy,
+        festival_mode:              cfg.festival_mode,
+        disable_gallery:            cfg.disable_gallery,
+        disable_gallery_statement:  cfg.disable_gallery_statement,
+        disable_publish:            cfg.disable_publish,
+        disable_publish_statement:  cfg.disable_publish_statement,
         lastUsed:    Date.now()
       };
       localStorage.setItem(KNOWN_COLLECTIONS_KEY, JSON.stringify(registry));
@@ -3413,12 +3471,12 @@ if (typeof module !== 'undefined' && module.exports) {
       _saveEtag(bgUrl, bgRes);
       _saveEtag(fontUrl, fontRes);
       const [bgBlob, fontBlob] = await Promise.all([bgRes.blob(), fontRes.blob()]);
-      config = {
+      config = Object.assign({
         title:       collectionJson.title       ?? COLLECTION_CONFIG_DEFAULTS.title,
         description: collectionJson.description ?? COLLECTION_CONFIG_DEFAULTS.description,
         name:        collectionJson.name        ?? COLLECTION_CONFIG_DEFAULTS.name,
         policy:      collectionJson.policy      ?? COLLECTION_CONFIG_DEFAULTS.policy
-      };
+      }, resolveCollectionFlags(collectionJson));
       // Only a live, successful fetch counts as re-opening the collection — a
       // fallback to the stored copy leaves its entry (and last-used timestamp) as is.
       if (!usedStoredConfig) _upsertKnownCollection(_runtimeConfig.bucket, config);
