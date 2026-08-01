@@ -353,6 +353,7 @@ The font (`Nove.woff2`) and background image (`background.jpeg`) are fetched at 
 4. An RLS **INSERT** policy must allow the `anon` role to write into `front/`. Without it, uploads return 403.
 5. An RLS **SELECT / list** policy must allow the `anon` role to read and list objects in `front/`. Without it, the gallery cannot fetch thumbnails or preview images (`list()` and `download()` return nothing or error).
 6. An RLS **DELETE** policy must allow the `anon` role to delete objects in `front/`. Without it, online card deletion returns 403.
+7. An RLS **INSERT/UPDATE** policy must allow the dedicated admin key to write `collection.json` at the **bucket root**. Without it, the admin settings sheet's save fails with a visible error and no flag values are written, though the app otherwise keeps working normally.
 
 Use the anon key (not the service-role key) in the configuration link.
 
@@ -361,6 +362,11 @@ root SELECT policy — without both, the app stops working for that bucket entir
 locally-saved card on a returning device to render as foreign afterwards: cards are now scoped by
 bucket rather than the old event identifier, and no backfill is performed. Editing and saving a
 foreign card forks it into the current collection.
+
+**Migration warning:** the root INSERT/UPDATE policy (item 7) is a new requirement — every bucket
+already in production must have it added before its admin can toggle any of the collection flags from
+the settings sheet. Without it, the admin key can still read the collection but every save attempt
+fails.
 
 ### Admin bucket (public) — manual setup
 

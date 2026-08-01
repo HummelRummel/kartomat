@@ -1,9 +1,14 @@
-// Collection flag resolution — given a parsed collection.json config object,
-// returns the five festival/gallery/publish fields with defaults and
-// statement fallbacks applied. Total over every input: a null, non-object, or
-// array config resolves to the full default set rather than throwing, and
-// each field is resolved independently so one bad field can't take the rest
-// down with it.
+// Collection flag resolution and config merge — two pure functions over the
+// parsed collection.json config object. Resolution returns the five
+// festival/gallery/publish fields with defaults and statement fallbacks
+// applied, total over every input: a null, non-object, or array config
+// resolves to the full default set rather than throwing, and each field is
+// resolved independently so one bad field can't take the rest down with it.
+// Merge folds a patch of those five fields into an existing config, refusing
+// rather than producing output when the existing config isn't a plain
+// object — this is the highest-value check in the module, since a merge
+// that drops the collection's other fields bricks the config file that the
+// app is fatal-on-missing for.
 
 const DISABLE_GALLERY_STATEMENT_DEFAULT = 'Die Galerie ist derzeit geschlossen.';
 const DISABLE_PUBLISH_STATEMENT_DEFAULT = 'Das Veröffentlichen ist derzeit nicht möglich.';
@@ -41,9 +46,34 @@ function resolveCollectionFlags(config) {
   };
 }
 
+const COLLECTION_FLAG_KEYS = Object.keys(COLLECTION_FLAG_DEFAULTS);
+
+// Merges a patch of the five flag fields into an existing parsed config,
+// returning the merged object. Only keys the patch actually owns (via
+// hasOwnProperty, so an explicit `undefined` still counts as owned) are
+// overwritten — every other field on the existing config, recognised or not,
+// passes through untouched. Refuses by returning null when the existing
+// config is absent, null, not a plain object, or an array, so a failed read
+// or a corrupt file can never be merged into a flags-only document.
+function mergeCollectionFlags(existingConfig, patch) {
+  if (!existingConfig || typeof existingConfig !== 'object' || Array.isArray(existingConfig)) {
+    return null;
+  }
+  const p = (patch && typeof patch === 'object' && !Array.isArray(patch)) ? patch : {};
+  const merged = Object.assign({}, existingConfig);
+  for (const key of COLLECTION_FLAG_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(p, key)) {
+      merged[key] = p[key];
+    }
+  }
+  return merged;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     resolveCollectionFlags,
-    COLLECTION_FLAG_DEFAULTS
+    mergeCollectionFlags,
+    COLLECTION_FLAG_DEFAULTS,
+    COLLECTION_FLAG_KEYS
   };
 }
