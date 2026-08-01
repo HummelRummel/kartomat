@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="7f752dd420a9">
+  <meta name="build-version" content="0016fc369c52">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -759,6 +759,7 @@
       flex: 1;
       min-height: 0;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       overflow: hidden;
@@ -768,10 +769,22 @@
     #cardViewImg,
     #deletedCardViewImg {
       max-width: 100%;
-      max-height: 100%;
+      flex: 1;
+      min-height: 0;
       object-fit: contain;
       border-radius: 4px;
       cursor: pointer;
+    }
+
+    .card-view-caption {
+      flex-shrink: 0;
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 8px;
     }
 
     .cardview-header {
@@ -1151,6 +1164,7 @@
     </header>
     <div class="card-view-body">
       <img id="cardViewImg" alt="" />
+      <div class="card-view-caption" id="cardViewCaption"></div>
     </div>
   </div>
 
@@ -1181,6 +1195,7 @@
     </header>
     <div class="card-view-body">
       <img id="deletedCardViewImg" alt="" />
+      <div class="card-view-caption" id="deletedCardViewCaption"></div>
     </div>
   </div>
 
@@ -2656,6 +2671,7 @@ if (typeof module !== 'undefined' && module.exports) {
     let _galleryObserver = null;
     let _cardViewObjectUrl = null;
     let _cardViewUuid = null;
+    let _cardViewCreatorId = null;
     let _deletePanelUuid = null;
     let _deletePanelCreatorId = null;
     let _deletedGalleryObjectUrls = [];
@@ -2674,6 +2690,7 @@ if (typeof module !== 'undefined' && module.exports) {
     function revokeCardViewUrl() {
       if (_cardViewObjectUrl) { URL.revokeObjectURL(_cardViewObjectUrl); _cardViewObjectUrl = null; }
       _cardViewUuid = null;
+      _cardViewCreatorId = null;
       _deletePanelUuid = null;
       _deletePanelCreatorId = null;
       document.getElementById('deletePanel').setAttribute('hidden', '');
@@ -2771,7 +2788,10 @@ if (typeof module !== 'undefined' && module.exports) {
 
     async function loadCardView(uuid) {
       const img = document.getElementById('cardViewImg');
+      const caption = document.getElementById('cardViewCaption');
       img.src = '';
+      caption.textContent = '';
+      _cardViewCreatorId = null;
       const client = getSupabaseClient();
       if (!client) return;
       const key = 'front/kartomat-' + uuid + '.jpeg';
@@ -2780,6 +2800,9 @@ if (typeof module !== 'undefined' && module.exports) {
       _cardViewObjectUrl = URL.createObjectURL(data);
       _cardViewUuid = uuid;
       img.src = _cardViewObjectUrl;
+      const info = await readCreatorInfo(data).catch(() => null);
+      caption.textContent = (info && info.creatorName) || 'Unbekannt';
+      _cardViewCreatorId = (info && info.creatorId) || null;
     }
 
     async function loadDeletedGallery() {
@@ -2864,7 +2887,9 @@ if (typeof module !== 'undefined' && module.exports) {
       _deletedCardViewIsLocked = false;
 
       const img = document.getElementById('deletedCardViewImg');
+      const caption = document.getElementById('deletedCardViewCaption');
       img.src = '';
+      caption.textContent = '';
       const unlockBtn = document.getElementById('deletedCardViewUnlockBtn');
       const restoreBtn = document.getElementById('deletedCardViewRestoreBtn');
       unlockBtn.textContent = 'Ersteller entsperren';
@@ -2880,12 +2905,16 @@ if (typeof module !== 'undefined' && module.exports) {
       _deletedCardViewObjectUrl = URL.createObjectURL(data);
       img.src = _deletedCardViewObjectUrl;
 
+      const info = await readCreatorInfo(data).catch(() => null);
+      caption.textContent = (info && info.creatorName) || 'Unbekannt';
+      let creatorId = (info && info.creatorId) || null;
+
       try {
         const [bundle, lockout] = await Promise.all([
-          fetchDeletedCardBundle(uuid),
+          creatorId ? Promise.resolve(null) : fetchDeletedCardBundle(uuid).catch(() => null),
           fetchLockoutList().catch(() => [])
         ]);
-        const creatorId = bundle && bundle.creatorId ? bundle.creatorId : null;
+        if (!creatorId && bundle && bundle.creatorId) creatorId = bundle.creatorId;
         const lockoutList = Array.isArray(lockout) ? lockout : [];
         _deletedCardViewCreatorId = creatorId;
 
@@ -2974,14 +3003,14 @@ if (typeof module !== 'undefined' && module.exports) {
       document.getElementById('cardViewDeleteBtn').style.display = 'none';
       document.getElementById('deletePanel').removeAttribute('hidden');
 
-      let creatorId = null;
+      let creatorId = _cardViewCreatorId || null;
       let lockoutList = [];
       try {
         const [bundle, lockout] = await Promise.all([
-          fetchCardBundle(uuid),
+          creatorId ? Promise.resolve(null) : fetchCardBundle(uuid).catch(() => null),
           fetchLockoutList().catch(() => [])
         ]);
-        creatorId = (bundle && bundle.creatorId) ? bundle.creatorId : null;
+        if (!creatorId && bundle && bundle.creatorId) creatorId = bundle.creatorId;
         lockoutList = Array.isArray(lockout) ? lockout : [];
       } catch (_) {}
 
