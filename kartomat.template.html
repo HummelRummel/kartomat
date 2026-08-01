@@ -899,7 +899,21 @@
       letter-spacing: .12em;
       text-transform: uppercase;
     }
-    body.admin-active #adminBanner { display: block; }
+    body.admin-active #adminBanner { display: flex; align-items: center; justify-content: center; gap: 12px; }
+    #adminLogoutBtn {
+      flex-shrink: 0;
+      background: none;
+      border: 1px solid #fff;
+      border-radius: 3px;
+      color: #fff;
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
     body.admin-active #loading,
     body.admin-active #nocfg,
     body.admin-active #home,
@@ -945,7 +959,10 @@
   </div>
 
   <!-- ── Admin banner ── -->
-  <div id="adminBanner">(K)ADMIN — Admin-Modus aktiv</div>
+  <div id="adminBanner">
+    <span>(K)ADMIN — Admin-Modus aktiv</span>
+    <button type="button" id="adminLogoutBtn">Abmelden</button>
+  </div>
 
   <!-- ── Install banner ── -->
   <div id="installBanner" hidden>
@@ -2876,6 +2893,37 @@
     });
     document.getElementById('collectionSwitcher').addEventListener('click', (e) => {
       if (e.target === document.getElementById('collectionSwitcher')) closeCollectionSwitcher();
+    });
+
+    // ── Admin entry gesture ──
+    // Three taps within a short window on the app-name heading. With no
+    // stored admin key this is a complete no-op — no visible response of
+    // any kind — so an ordinary visitor can never discover admin mode
+    // exists. Entry takes effect via the same persist-then-reload mechanism
+    // as everywhere else; applyAdminMode() (run at startup) remains the
+    // only code path that builds the admin interface.
+    let _adminGestureCount = 0;
+    let _adminGestureTimer = null;
+    document.querySelector('.app-name').addEventListener('click', () => {
+      if (!_adminState.isAvailable()) return;
+      clearTimeout(_adminGestureTimer);
+      _adminGestureCount++;
+      if (_adminGestureCount >= 3) {
+        _adminGestureCount = 0;
+        _adminState.enter(_adminState.key());
+        location.reload();
+        return;
+      }
+      _adminGestureTimer = setTimeout(() => { _adminGestureCount = 0; }, 600);
+    });
+
+    // ── Admin logout ──
+    // Clears the active flag but keeps the stored key, then reloads — the
+    // same persist-then-reload mechanism, so the gesture above can get back
+    // in without the original link.
+    document.getElementById('adminLogoutBtn').addEventListener('click', () => {
+      _adminState.leave();
+      location.reload();
     });
 
     // ── Asset loading ──
