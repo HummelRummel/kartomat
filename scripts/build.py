@@ -20,7 +20,8 @@ version = content_version()
 
 # index.html — this is the file GitHub Pages serves as the directory default
 tmpl = open(os.path.join(root, 'kartomat.template.html')).read()
-html = tmpl.replace('{version}', version)
+codec_source = open(os.path.join(root, 'src', 'jpeg-comment-codec.js')).read()
+html = tmpl.replace('{version}', version).replace('{jpeg_comment_codec}', codec_source)
 open(os.path.join(root, 'index.html'), 'w').write(html)
 print(f'index.html built (version={version})')
 
