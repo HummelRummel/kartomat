@@ -52,33 +52,75 @@ The built `index.html` carries no credentials. Pass the Supabase project URL, an
 | `url` | Supabase project URL, e.g. `https://<project>.supabase.co` |
 | `key` | Supabase anon key |
 | `bucket` | Storage bucket name |
-| `event` | Unique event identifier; cards created here are owned by this event. Cards from other events remain accessible but are shown as foreign. |
-| `tagline` | Optional tagline shown on the home screen. Defaults to a generic festival-card blurb. |
-| `policy` | Optional content-policy text shown above the publish confirm. Overrides the default German reminder. Persisted to localStorage. |
 | `adminkey` | Supabase admin key with write access to `lockout.json` and move/delete rights on the card bucket. Activates ephemeral admin mode — not persisted to localStorage; any reload ends admin mode. See [Admin mode](#admin-mode). |
 
-`url`, `key`, and `bucket` must appear together in one link; omitting any triggers a configuration error. `event` and `tagline` fall back to built-in defaults if omitted but should be set per event.
+`url`, `key`, and `bucket` must appear together in one link; omitting any triggers a configuration error. All customisable text (headline, description, collection name, content-policy) now lives in [`collection.json`](#collection-configuration-collectionjson) instead of the URL.
+
+Any other query parameter is ignored rather than rejected — in particular the retired `event`, `tagline` and `policy` parameters, so QR codes already printed with them keep working, just without effect.
 
 **Example link:**
 
 ```
-https://<user>.github.io/<repo>/?url=https://<project>.supabase.co&key=<anon key>&bucket=<bucket>&event=<event-id>
+https://<user>.github.io/<repo>/?url=https://<project>.supabase.co&key=<anon key>&bucket=<bucket>
 ```
 
-(Opening a local file works too: `index.html?url=…&key=…&bucket=…&event=….`)
+(Opening a local file works too: `index.html?url=…&key=…&bucket=….`)
 
 **QR codes:** Encode the full link above with any QR generator. The anon JWT is long (~200+ characters), so the resulting QR code is dense — use an adequate print size (≥ 4 cm) and a high error-correction level (Q or H) to ensure reliable scanning.
 
 **Security note:** The anon key is public by design; it is not a secret. Access is controlled by Supabase Row Level Security policies. URL configuration is about deployment flexibility, not secrecy.
 
+## Collection configuration (`collection.json`)
+
+Every customisable piece of text lives in a `collection.json` file at the **root of the collection
+bucket** (not under `assets/`). Editing it in the Supabase dashboard reaches every device on its next
+start — no new QR code needed. It is fetched in parallel with the background image and font, over the
+same authenticated Storage endpoint, so the home screen renders with final text on its first frame.
+
+All fields are optional; each falls back to a built-in default when omitted:
+
+| Field | Description |
+|---|---|
+| `title` | Home-screen top line (previously the `?event=` parameter). |
+| `description` | The line under the app name (previously the `?tagline=` parameter). |
+| `name` | Short display name used in the [collection switcher](#flow) and on foreign-card badges. |
+| `policy` | Publish content-policy text (previously the `?policy=` parameter). First line renders as the bold banner title, remaining lines as the muted body. |
+
+**Failure handling:**
+- File missing or unreadable (404/403) — **fatal**: the app stops at the loading-error screen. A
+  bucket that is reachable but cannot serve the file is treated as misconfigured.
+- Bucket unreachable (offline, DNS, transport failure) — falls back to the copy stored the last time
+  this bucket loaded successfully (see the [known-collections registry](#local-storage)); fatal if no
+  such copy exists yet.
+
+Because the file sits at the bucket root rather than under `assets/`, it falls outside the service
+worker's cache-first rule and is always fetched fresh — it never participates in the "Update
+verfügbar" check.
+
+**Required policy:** add an anon **SELECT** policy covering the bucket root, in addition to the
+existing `assets/**` and `front/**` policies — without it every request for `collection.json` 404s and
+the app refuses to start.
+
 ## Flow
 
-**Home screen** — shows the app name, a one-line intention, a secondary **Galerie** button, and the primary **Karte erstellen** button (Galerie is placed above Karte erstellen, in outlined style so creating remains the primary call-to-action). Below the buttons, cards appear as thumbnails. Own cards (belonging to the current event) are listed first; foreign cards (from other events) appear below. Publish tags apply to own cards:
+**Home screen** — shows the app name, a headline and description sourced from
+[`collection.json`](#collection-configuration-collectionjson), a secondary **Galerie** button, and the
+primary **Karte erstellen** button (Galerie is placed above Karte erstellen, in outlined style so
+creating remains the primary call-to-action). Below the description, a name row shows the collection's
+display name: plain muted text when the device knows only one collection, or a tappable chip with a
+chevron once it knows more than one. Tapping the chip opens a bottom-sheet picker (reusing the
+photo-chooser overlay's markup and styling) listing every known collection by display name, most
+recently used first, with the active one marked; picking one writes it as the active config and
+reloads the page into it. Below the buttons, cards appear as thumbnails. Own cards (belonging to the
+current bucket) are listed first; foreign cards (from other buckets) appear below. Publish tags apply
+to own cards:
 - **Veröffentlicht** — card is published and unchanged since publish.
 - **Veröffentlicht (alt)** — card was published but has been edited since.
 - **Entwurf** — card has never been published.
 
-Foreign cards show the originating event name in place of the publish tag, and their thumbnail is shown at 50% opacity.
+Foreign cards show the originating collection's display name in place of the publish tag — falling
+back to the raw bucket name, or "Unbekannt" for records with no bucket at all — and their thumbnail is
+shown at 50% opacity.
 
 **Gallery screen** — a full-screen grid of published cards, newest first, fetched from Supabase Storage (up to 200 cards). A **Zurück** button at the top returns to the home screen. When returning from a card view, scroll position is restored instantly with no refetch. The grid has three states:
 - *Wird geladen …* — while thumbnails are being fetched.
@@ -98,16 +140,23 @@ Only cards published with the new three-file bundle (`.thumb.jpeg` present) appe
 - **Zurück** — navigates to the home screen immediately when there are no unsaved changes; requires a two-tap "Änderungen verwerfen?" confirm when there are.
 - Bottom action bar — 2-column grid: **Speichern** + **Herunterladen** side-by-side on row 1; **Veröffentlichen** full-width on row 2.
 
-**Publish flow** — Tapping **Veröffentlichen** triggers a lockout check (fetch `lockout.json` from the `admin` bucket). Three outcomes:
+**Publish flow** — Tapping **Veröffentlichen** triggers a lockout check (fetch `lockout.json` from the
+`admin` bucket). The banner is anchored to the **bottom** of the editor, covering the action bar below
+it instead of shrinking the card preview above; it uses the page's own background colour, and a
+coloured left stripe is the only variant marker. Three outcomes:
 
-- **Connection error** — a banner ("Keine Verbindung") appears above the button with an **Erneut versuchen** button. Publishing is blocked until the check succeeds; going offline cannot bypass this.
-- **User is locked out** — a locked-out banner ("Du bist gesperrt") appears. No confirm action is offered — this is a dead end.
-- **User is clear** — a content-policy banner appears (text defaults to a German reminder; overridable via `?policy=`). A **Bestätigen** button completes the upload; a **Doch nicht** button dismisses the banner and cancels publishing.
+- **Connection error** — a banner ("Keine Verbindung", amber stripe) with an **Erneut versuchen**
+  button. Publishing is blocked until the check succeeds; going offline cannot bypass this.
+- **User is locked out** — a locked-out banner ("Du bist gesperrt", red stripe). No confirm action is
+  offered — this is a dead end.
+- **User is clear** — a content-policy banner (neutral stripe; text comes from
+  [`collection.json`](#collection-configuration-collectionjson)'s `policy` field). A **Bestätigen**
+  button completes the upload; a **Doch nicht** button dismisses the banner and cancels publishing.
 
 **Two-tap confirm** — Zurück uses this pattern when there are unsaved changes (relabels to "Änderungen verwerfen?"). Speichern is two-tap (relabels to "Wirklich?") only when overwriting an already-saved own card; a new card or a foreign-card fork is single-tap. Herunterladen is always single-tap.
 
 **Delete flow** — The trash button (🗑) on each home-list card branches on ownership and publish state:
-- **Foreign card** — single "delete locally" confirmation banner, then removes the local record only; the original in its own event's cloud storage is untouched.
+- **Foreign card** — single "delete locally" confirmation banner, then removes the local record only; the original in its own collection's cloud storage is untouched.
 - **Own unpublished card** — single "delete locally" confirmation banner, then removes the local record.
 - **Own published card** — reveals two choices: **Lokal** and **Online**.
   - **Online** — confirmation banner, then deletes the three UUID-derived Supabase Storage files first; only removes the local record if the online delete succeeds. If the online delete fails, the card is kept and an error banner invites retry.
@@ -122,7 +171,7 @@ Cards are stored in **IndexedDB** (database name `kartomat`) via the `cardStore`
 | Field | Description |
 |---|---|
 | `id` | Stable UUID assigned at first save |
-| `event` | Event identifier stamped at persist time; a card is "foreign" when this differs from the current event |
+| `bucket` | Bucket name stamped at persist time; a card is "foreign" when this differs from the active bucket. Records predating this change carry no `bucket` and are therefore always foreign. |
 | `title`, `desc` | Card text |
 | `photo` | JPEG normalized to ≤ 1110 px height on import |
 | `userScale`, `offsetXFrac`, `offsetYFrac` | Pan/zoom state |
@@ -134,6 +183,23 @@ Cards are stored in **IndexedDB** (database name `kartomat`) via the `cardStore`
 IndexedDB is used instead of localStorage because a single photo can exceed the ~5 MB localStorage cap.
 
 API: `list()`, `get(id)`, `put(record)`, `remove(id)`, `markPublished(id, fingerprint)`.
+
+Foreign cards fork into the current collection on save — a new `id`, `bucket` re-stamped to the
+active bucket, and publish state cleared — so this also doubles as the migration path for records
+predating the `bucket` field.
+
+### localStorage keys
+
+| Key | Holds |
+|---|---|
+| `kartomat_cfg` | The active `{url, key, bucket}`, written when a link is opened or a collection is picked from the switcher. |
+| `kartomat:knownCollections` | Every collection this device has successfully opened, keyed by bucket: connection details, the four resolved `collection.json` fields, and a last-used timestamp. Written only once both the assets and `collection.json` have loaded successfully; also serves as the offline fallback for `collection.json`. Feeds the [collection switcher](#flow). |
+| `kartomat:userId` | The anonymous per-device UUID — see [User identity](#user-identity). |
+| `kartomat:etag:<url>` | Cached asset validator used to detect a changed background/font. |
+
+The retired `kartomat:event`, `kartomat:tagline`, `kartomat:policy` keys and a dead `kartomat:bucket`
+entry (which collided in name with the real connection parameter but was never read) are removed via
+a one-time cleanup on first load.
 
 **Save** requires only a photo. **Download** is a pure export — it renders and downloads the PNG and leaves the user in the editor; it does not persist the card and does not navigate home. **Publish** additionally requires title and description; empty fields are flagged with a red border. The Publish button is also disabled and relabelled **Keine Änderungen** when the card is already published and unchanged (i.e. `publishedFingerprint` matches the current version), preventing redundant re-publishes.
 
@@ -179,12 +245,19 @@ The font (`Nove.woff2`) and background image (`background.jpeg`) are fetched at 
 ### Card bucket (private)
 
 1. The configured bucket (passed via the `bucket` URL parameter) must exist.
-2. Assets uploaded to `assets/`, with a SELECT policy allowing the `anon` role to read `assets/**` — see [Bucket assets](#bucket-assets).
-3. An RLS **INSERT** policy must allow the `anon` role to write into `front/`. Without it, uploads return 403.
-4. An RLS **SELECT / list** policy must allow the `anon` role to read and list objects in `front/`. Without it, the gallery cannot fetch thumbnails or preview images (`list()` and `download()` return nothing or error).
-5. An RLS **DELETE** policy must allow the `anon` role to delete objects in `front/`. Without it, online card deletion returns 403.
+2. `collection.json` uploaded to the **bucket root**, with a SELECT policy allowing the `anon` role to read the bucket root — see [Collection configuration](#collection-configuration-collectionjson). The app is fatal-on-404 for this file: a bucket missing either the file or the policy stops the app at the loading-error screen for every user, with no escape hatch to switch away.
+3. Assets uploaded to `assets/`, with a SELECT policy allowing the `anon` role to read `assets/**` — see [Bucket assets](#bucket-assets).
+4. An RLS **INSERT** policy must allow the `anon` role to write into `front/`. Without it, uploads return 403.
+5. An RLS **SELECT / list** policy must allow the `anon` role to read and list objects in `front/`. Without it, the gallery cannot fetch thumbnails or preview images (`list()` and `download()` return nothing or error).
+6. An RLS **DELETE** policy must allow the `anon` role to delete objects in `front/`. Without it, online card deletion returns 403.
 
 Use the anon key (not the service-role key) in the configuration link.
+
+**Before this reaches existing users:** every bucket already in use must get `collection.json` and its
+root SELECT policy — without both, the app stops working for that bucket entirely. Also expect every
+locally-saved card on a returning device to render as foreign afterwards: cards are now scoped by
+bucket rather than the old event identifier, and no backfill is performed. Editing and saving a
+foreign card forks it into the current collection.
 
 ### Admin bucket (public) — manual setup
 
@@ -213,13 +286,18 @@ Admin mode is activated by opening the app with `?adminkey=<key>` in the URL. Th
 
 ### Deleting a card
 
-In admin mode each card detail view shows a **Bild löschen und Benutzer sperren** button at the top (instead of Herunterladen). A single tap opens a "Karte löschen" panel with three choices:
+In admin mode each card detail view shows a **Löschen und/oder sperren** button at the top (instead of
+Herunterladen). Tapping it hides the trigger and puts three option buttons in its place (no separate
+panel heading — the trigger's own label already supplies that context):
 
 - **Löschen & sperren** — moves the three card files to `front-deleted/` and adds the creator's UUID to `lockout.json`. Requires a second confirming tap (relabels to **"Wirklich sperren?"**). Disabled (shown as **"Schon gesperrt"**) if the creator is already locked; disabled (shown as **"Ersteller unbekannt"**) for legacy cards without a `creatorId`.
 - **Nur löschen** — moves the three card files to `front-deleted/`. Requires a second confirming tap (relabels to **"Wirklich löschen?"**).
-- **Abbrechen** — closes the panel on a single tap.
+- **Abbrechen** — restores the trigger on a single tap.
 
-Tapping elsewhere while a destructive button is armed disarms it without committing. The card disappears from the public gallery immediately after deletion.
+Tapping elsewhere while a destructive button is armed disarms it without committing. Leaving the card
+(back to the gallery, or opening a different one) also restores the trigger and hides the options, so
+a half-open panel is never left behind. The card disappears from the public gallery immediately after
+deletion.
 
 Tapping the card image or any empty area beside the card (the backdrop) returns to the gallery — even when the delete panel is open.
 
