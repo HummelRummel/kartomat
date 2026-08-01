@@ -4,7 +4,7 @@ Mobile-first tool for creating card **fronts** at the festival. Front-only, uplo
 
 ## Build
 
-The source is `kartomat.template.html`, plus `src/jpeg-comment-codec.js` — the one extracted module in an otherwise single-file app. The build step (`scripts/build.py`) renders the template to `index.html` (splicing the codec source in for the `{jpeg_comment_codec}` placeholder) — `index.html` is the file GitHub Pages serves as the directory default — and generates the service worker `sw.js`:
+The source is `kartomat.template.html`, plus two extracted modules in an otherwise single-file app: `src/jpeg-comment-codec.js` and `src/collection-flags.js` (flag resolution and config merge — see [Collection configuration](#collection-configuration-collectionjson)). The build step (`scripts/build.py`) renders the template to `index.html` (splicing each module's source in for its `{jpeg_comment_codec}` / `{collection_flags}` placeholder) — `index.html` is the file GitHub Pages serves as the directory default — and generates the service worker `sw.js`:
 
 ```
 make
@@ -13,9 +13,9 @@ make
 **Prerequisites:**
 - Python 3
 
-`index.html` and `sw.js` are build outputs but are committed, because GitHub Pages serves them directly from the repo. Rebuild and commit both whenever the template, `src/jpeg-comment-codec.js`, or `manifest.json` changes. `make clean` removes them.
+`index.html` and `sw.js` are build outputs but are committed, because GitHub Pages serves them directly from the repo. Rebuild and commit both whenever the template, either extracted module, or `manifest.json` changes. `make clean` removes them.
 
-**Tests:** `src/jpeg-comment-codec.js` has a test suite at `test/jpeg-comment-codec.test.js`, run with the Node built-in test runner (`node --test test/`) — no dependencies, no package manifest. It is the only automated test coverage in the project; everything else is verified manually (see the PRDs under `issues/`).
+**Tests:** `src/jpeg-comment-codec.js` and `src/collection-flags.js` each have a test suite (`test/jpeg-comment-codec.test.js`, `test/collection-flags.test.js`), run with the Node built-in test runner (`node --test test/`) — no dependencies, no package manifest. This is the only automated test coverage in the project; everything else is verified manually (see the PRDs under `issues/`).
 
 The font and background image are fetched at runtime from the configured Supabase bucket — see [Bucket assets](#bucket-assets) for the upload step.
 
@@ -81,12 +81,21 @@ same authenticated Storage endpoint, so the home screen renders with final text 
 
 All fields are optional; each falls back to a built-in default when omitted:
 
-| Field | Description |
-|---|---|
-| `title` | Home-screen top line, and the home screen's collection picker (previously the `?event=` parameter). |
-| `description` | The line under the app name (previously the `?tagline=` parameter). |
-| `name` | Short display name shown in the [per-screen collection bar](#flow), the [collection switcher](#flow), and on foreign-card badges. |
-| `policy` | Publish content-policy text (previously the `?policy=` parameter). First line renders as the bold banner title, remaining lines as the muted body. |
+| Field | Description | Default |
+|---|---|---|
+| `title` | Home-screen top line, and the home screen's collection picker (previously the `?event=` parameter). | built-in headline |
+| `description` | The line under the app name (previously the `?tagline=` parameter). | built-in description |
+| `name` | Short display name shown in the [per-screen collection bar](#flow), the [collection switcher](#flow), and on foreign-card badges. | built-in collection name |
+| `policy` | Publish content-policy text (previously the `?policy=` parameter). First line renders as the bold banner title, remaining lines as the muted body. | built-in policy text |
+| `festival_mode` | When `true` (and the user is not an admin), non-admin gallery tiles become inert — no pointer cursor, no click handler, no full-size JPEG fetched on tap. See [Flow](#flow). | `false` |
+| `disable_gallery` | When `true` (and the user is not an admin), tapping **Galerie** opens a statement sheet instead of navigating. See [Flow](#flow). | `false` |
+| `disable_gallery_statement` | Text shown in that sheet. An empty or whitespace-only value counts as absent. | `"Die Galerie ist derzeit geschlossen."` |
+| `disable_publish` | When `true` (and the user is not an admin), tapping **Veröffentlichen** shows a dead-end banner instead of starting the publish flow. See [Flow](#flow). | `false` |
+| `disable_publish_statement` | Text shown in that banner. An empty or whitespace-only value counts as absent. | `"Das Veröffentlichen ist derzeit nicht möglich."` |
+
+All three flags are ignored in admin mode, and all five fields can be edited from the app itself via
+the [admin settings sheet](#admin-mode) as well as directly in the Supabase dashboard — each statement
+field is named after its flag so hand-editing the file cannot confuse them.
 
 **Example** (also in [`collection.json`](collection.json) at the repo root):
 
@@ -95,13 +104,21 @@ All fields are optional; each falls back to a built-in default when omitted:
   "title": "/// 3026grad festival",
   "description": "Erstelle deine eigene Festivalkarte — schön, schnell, auf deinem Handy.",
   "name": "3026grad",
-  "policy": "Seid rücksichtsvoll.\nAndere Personen sehen deine Karte.\nKein Sexismus, kein Rassismus, keine Homophobie."
+  "policy": "Seid rücksichtsvoll.\nAndere Personen sehen deine Karte.\nKein Sexismus, kein Rassismus, keine Homophobie.",
+  "festival_mode": true,
+  "disable_gallery": false,
+  "disable_gallery_statement": "",
+  "disable_publish": false,
+  "disable_publish_statement": "Wir veröffentlichen gerade nicht — schaut später noch mal vorbei."
 }
 ```
 
 Line breaks in `policy` are JSON `\n` escapes inside the single string — the first line ("Seid
 rücksichtsvoll.") becomes the banner title, the remaining two the body. Any field may be dropped to
-take the built-in default; an empty `{}` is valid and yields the defaults for all four.
+take the built-in default; an empty `{}` is valid and yields the defaults for all nine. In the example
+above, `festival_mode` is on and `disable_gallery_statement` is left blank, so the gallery-disabled
+sheet (were `disable_gallery` also on) would fall back to the built-in German default rather than
+showing an empty box.
 
 **Failure handling:**
 - File missing or unreadable (404/403) — **fatal**: the app stops at the loading-error screen. A
@@ -162,6 +179,20 @@ thumbnail JPEG the tile already downloads (see [Cloud publish](#cloud-publish)) 
 Cards published before this feature carry no name and show "Unbekannt". Visible to ordinary visitors
 and admins alike; there is no separate admin grid.
 
+**Festival mode** (`festival_mode` in [`collection.json`](#collection-configuration-collectionjson))
+makes non-admin tiles inert: no pointer cursor, no click handler, and no full-size JPEG is fetched on
+tap — a silent no-op rather than an explanatory message. The grid, its lazy thumbnail loading, and the
+creator captions all render exactly as without the flag. Admins are unaffected and can still open any
+card full-size.
+
+**Gallery disabled** (`disable_gallery`) blocks non-admin access entirely: tapping **Galerie** opens a
+statement sheet (reusing the photo-chooser overlay styling) showing the collection's configured
+statement — or the built-in German default when left blank — with a single dismiss action back to
+home. The **Galerie** button itself stays visible and tappable, since it is the only way the statement
+can be delivered. Both flags are re-read fresh from `collection.json` on every Galerie tap, so a flag
+flipped from another device reaches an already-open client on its next tap, with no reload. Admins
+bypass both flags, and the Deleted Gallery is unaffected by either.
+
 **Card view screen** — a read-only full-screen view of a single published card, opened by tapping a gallery thumbnail. Shows the full-size published preview image, with the creator's Künstlername (or "Unbekannt") captioned underneath, read from the same preview JPEG. A **Herunterladen** button downloads the full-size JPEG (reusing the already-fetched blob — no extra network request; saved as `kartomat-<uuid>.jpeg`). Tapping the card image or any empty area beside the card (the backdrop) returns to the gallery. No editing or re-publishing from this screen.
 
 **Starting a card** — on mobile, tapping **Karte erstellen** shows a chooser (Kamera / Galerie). On desktop, the file picker opens directly. After photo selection the editor opens immediately.
@@ -178,18 +209,29 @@ and admins alike; there is no separate admin grid.
 proceeds to the next, cancelling anywhere returns to the editor with nothing published, and the whole
 chain costs one press of Veröffentlichen:
 
-1. **Wrong-collection confirm** — only when the card belongs to another collection (see the
+1. **Publishing-disabled pre-check** — an instant, local check against the startup-loaded
+   `disable_publish` flag ([`collection.json`](#collection-configuration-collectionjson)). When on, a
+   dead-end variant of the publish banner appears immediately — before any typing and before any
+   network request. Skipped for admins. This gate runs **first**, ahead of every gate below, so a hard
+   refusal never arrives after the user has confirmed a collection and typed a name.
+2. **Wrong-collection confirm** — only when the card belongs to another collection (see the
    [wrong-collection guard](#flow) above); purely local, so declining costs no network round-trip.
-2. **Künstlername gate** — only when the device has no Künstlername set yet; opens the Künstlername
+3. **Künstlername gate** — only when the device has no Künstlername set yet; opens the Künstlername
    sheet in blocking mode (cancel and backdrop-dismiss suppressed). Saving a name resumes the chain
    automatically — no second press of Veröffentlichen needed.
-3. **Lockout check** — fetches `lockout.json` from the `admin` bucket.
-4. **Content-policy banner** — states the publish policy and that the Künstlername is shown publicly.
+4. **Lockout check** — fetches `lockout.json` from the `admin` bucket. In the same round-trip, the
+   `disable_publish` flag is re-read fresh from `collection.json`, so a flag flipped mid-session is
+   caught here even though step 1 already passed; a failed re-fetch falls back to the startup-loaded
+   value rather than blocking the check.
+5. **Content-policy banner** — states the publish policy and that the Künstlername is shown publicly.
 
-Steps 3–4 render as a banner anchored to the **bottom** of the editor, covering the action bar below it
-instead of shrinking the card preview above; it uses the page's own background colour, and a coloured
-left stripe is the only variant marker. Three outcomes:
+Steps 1, 4 and 5 render as a banner anchored to the **bottom** of the editor, covering the action bar
+below it instead of shrinking the card preview above; it uses the page's own background colour, and a
+coloured left stripe is the only variant marker. Four outcomes:
 
+- **Publishing disabled** — a dead-end banner ("Veröffentlichen nicht möglich", red stripe) showing the
+  collection's configured statement, or the built-in German default when left blank. No confirm action
+  is offered — this is a dead end, reached from either step 1's instant pre-check or step 4's re-verify.
 - **Connection error** — a banner ("Keine Verbindung", amber stripe) with an **Erneut versuchen**
   button. Publishing is blocked until the check succeeds; going offline cannot bypass this.
 - **User is locked out** — a locked-out banner ("Du bist gesperrt", red stripe). No confirm action is
@@ -198,6 +240,9 @@ left stripe is the only variant marker. Three outcomes:
   [`collection.json`](#collection-configuration-collectionjson)'s `policy` field, plus a fixed line
   stating the Künstlername is shown publicly). A **Bestätigen** button completes the upload; a
   **Doch nicht** button dismisses the banner and cancels publishing.
+
+Veröffentlichen stays tappable throughout — including with `disable_publish` on — since the banner is
+the only way the statement reaches the user.
 
 **Two-tap confirm** — Zurück uses this pattern when there are unsaved changes (relabels to "Änderungen verwerfen?"). Speichern is two-tap (relabels to "Wirklich?") only when overwriting an already-saved own card; a brand-new card is single-tap. Saving or publishing a card that belongs to another collection is no longer a silent single-tap fork — both now show the wrong-collection confirm banner first (see above), naming the collection the card came from and the one it is about to enter. Herunterladen is always single-tap.
 
@@ -249,7 +294,7 @@ predating the `bucket` field.
 | Key | Holds |
 |---|---|
 | `kartomat_cfg` | The active `{url, key, bucket}`, written when a link is opened or a collection is picked from the switcher. |
-| `kartomat:knownCollections` | Every collection this device has successfully opened, keyed by bucket: connection details, the four resolved `collection.json` fields, and a last-used timestamp. Written only once both the assets and `collection.json` have loaded successfully; also serves as the offline fallback for `collection.json`. Feeds the [collection switcher](#flow). |
+| `kartomat:knownCollections` | Every collection this device has successfully opened, keyed by bucket: connection details, all nine resolved `collection.json` fields (the four text fields and the five flag fields), and a last-used timestamp. Written only once both the assets and `collection.json` have loaded successfully; also serves as the offline fallback for `collection.json` and its flags. Feeds the [collection switcher](#flow). |
 | `kartomat:userId` | The anonymous per-device UUID — see [User identity](#user-identity). |
 | `kartomat:artistName` | The device's Künstlername, `null` until set — see [User identity](#user-identity). |
 | `kartomat:etag:<url>` | Cached asset validator used to detect a changed background/font. |
@@ -419,7 +464,39 @@ else.
 
 - Home title changes from `(K)artomat` to `(K)admin`.
 - A fixed red banner reading **"(K)ADMIN — Admin-Modus aktiv"** is visible on every screen.
-- The **Karte erstellen** button, local card list, and Künstlername line are hidden. A **Gelöschte Galerie** button appears in their place.
+- The **Karte erstellen** button, local card list, and Künstlername line are hidden. **Gelöschte
+  Galerie** and **Einstellungen** buttons appear in their place.
+
+### Settings sheet
+
+Tapping **Einstellungen** — revealed by the same mechanism as **Gelöschte Galerie**, so it is absent
+outside admin mode — opens a bottom sheet (reusing the photo-chooser overlay styling) that edits all
+five [collection-flag fields](#collection-configuration-collectionjson) in one place:
+
+- Three toggles, one per flag, built from the existing action-button/armed-state styling rather than a
+  new switch control:
+
+  | Toggle | Flag | Effect on non-admin visitors |
+  |---|---|---|
+  | Festival-Modus | `festival_mode` | Gallery tiles lose their pointer cursor and click handler; tapping does nothing and no full-size JPEG is fetched. |
+  | Galerie sperren | `disable_gallery` | Tapping **Galerie** opens a statement sheet instead of navigating. |
+  | Veröffentlichen sperren | `disable_publish` | Tapping **Veröffentlichen** immediately shows a dead-end banner, before any typing or network request. |
+
+  Admins are exempt from all three, so toggling them never locks an admin out of their own tools — see
+  [Flow](#flow) for each effect in detail.
+- Two multi-line statement fields — the app's first textareas — one per statement flag, labelled so it
+  is clear which flag each belongs to. Left blank, the field saves as absent so the built-in German
+  default applies; the sheet does not prefill the default text itself, only the stored value.
+- One **Speichern** action, writing all five values in a single request through the write routine (see
+  [Supabase prerequisites](#supabase-prerequisites) for the required policy); a dismiss action closes
+  without saving.
+
+Opening the sheet reflects the currently resolved flag states and statement text, so the admin edits
+rather than retypes. The sheet scrolls within a bounded maximum height so **Speichern** stays reachable
+with the on-screen keyboard open on a phone. On success the sheet closes and the change is live
+immediately, with no reload, and the [known-collections registry](#local-storage) entry is updated too.
+On failure — including a bucket still missing the new root write policy — a visible error appears in
+the sheet and nothing already-saved is lost.
 
 ### Deleting a card
 
