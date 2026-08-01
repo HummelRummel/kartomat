@@ -2660,6 +2660,40 @@
       policy:      'Seid rücksichtsvoll.\nAndere Personen sehen deine Karte.\nkein Sexismus, kein Rassismus, keine Homophobie.'
     };
 
+    // ── Known-collections registry ──
+    // Every collection this device has successfully opened, keyed by bucket. Read
+    // synchronously from localStorage (not IndexedDB) because it must be available
+    // during startup config resolution, before anything renders. Doubles as the
+    // offline fallback for collection.json below.
+    const KNOWN_COLLECTIONS_KEY = 'kartomat:knownCollections';
+
+    function _loadKnownCollections() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(KNOWN_COLLECTIONS_KEY));
+        return (parsed && typeof parsed === 'object') ? parsed : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function _getKnownCollection(bucket) {
+      return _loadKnownCollections()[bucket] || null;
+    }
+
+    function _upsertKnownCollection(bucket, cfg) {
+      const registry = _loadKnownCollections();
+      registry[bucket] = {
+        url:         _runtimeConfig.url,
+        key:         _runtimeConfig.key,
+        title:       cfg.title,
+        description: cfg.description,
+        name:        cfg.name,
+        policy:      cfg.policy,
+        lastUsed:    Date.now()
+      };
+      localStorage.setItem(KNOWN_COLLECTIONS_KEY, JSON.stringify(registry));
+    }
+
     // ── Asset loading ──
 
     function _saveEtag(url, res) {
@@ -2689,23 +2723,47 @@
       const bgUrl = base + '/background.jpeg';
       const fontUrl = base + '/Nove.woff2';
       const configUrl = _collectionConfigUrl();
-      const [bgRes, fontRes, configRes] = await Promise.all([
+      // Settled independently (not a single failing Promise.all) so that a rejected
+      // collection.json fetch — the only one of the three not covered by the service
+      // worker's cache-first rule, and therefore the only one that can reject while
+      // offline — can fall back to the registry without losing the background/font.
+      const [bgOutcome, fontOutcome, configOutcome] = await Promise.allSettled([
         fetch(bgUrl, { headers: _authHeaders() }),
         fetch(fontUrl, { headers: _authHeaders() }),
         fetch(configUrl, { headers: _authHeaders() })
       ]);
+      if (bgOutcome.status === 'rejected') throw bgOutcome.reason;
+      if (fontOutcome.status === 'rejected') throw fontOutcome.reason;
+      const bgRes = bgOutcome.value;
+      const fontRes = fontOutcome.value;
       if (!bgRes.ok) throw new Error('background.jpeg: HTTP ' + bgRes.status);
       if (!fontRes.ok) throw new Error('Nove.woff2: HTTP ' + fontRes.status);
-      if (!configRes.ok) throw new Error('collection.json: HTTP ' + configRes.status);
+
+      let collectionJson;
+      let usedStoredConfig = false;
+      if (configOutcome.status === 'fulfilled') {
+        const configRes = configOutcome.value;
+        if (!configRes.ok) throw new Error('collection.json: HTTP ' + configRes.status);
+        collectionJson = await configRes.json();
+      } else {
+        const stored = _getKnownCollection(_runtimeConfig.bucket);
+        if (!stored) throw configOutcome.reason;
+        collectionJson = stored;
+        usedStoredConfig = true;
+      }
+
       _saveEtag(bgUrl, bgRes);
       _saveEtag(fontUrl, fontRes);
-      const [bgBlob, fontBlob, collectionJson] = await Promise.all([bgRes.blob(), fontRes.blob(), configRes.json()]);
+      const [bgBlob, fontBlob] = await Promise.all([bgRes.blob(), fontRes.blob()]);
       config = {
         title:       collectionJson.title       ?? COLLECTION_CONFIG_DEFAULTS.title,
         description: collectionJson.description ?? COLLECTION_CONFIG_DEFAULTS.description,
         name:        collectionJson.name        ?? COLLECTION_CONFIG_DEFAULTS.name,
         policy:      collectionJson.policy      ?? COLLECTION_CONFIG_DEFAULTS.policy
       };
+      // Only a live, successful fetch counts as re-opening the collection — a
+      // fallback to the stored copy leaves its entry (and last-used timestamp) as is.
+      if (!usedStoredConfig) _upsertKnownCollection(_runtimeConfig.bucket, config);
       document.getElementById('homeTitle').textContent       = config.title;
       document.getElementById('homeDescription').textContent = config.description;
       document.getElementById('homeName').textContent        = config.name;
