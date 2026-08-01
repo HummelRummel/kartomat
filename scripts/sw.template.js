@@ -42,10 +42,12 @@ self.addEventListener('fetch', event => {
   if (url.pathname.includes('/storage/v1/object/authenticated/') && url.pathname.includes('/assets/')) {
     event.respondWith(
       caches.match(request).then(cached => {
-        if (cached) return cached;
+        if (cached && cached.ok) return cached;
         return fetch(request).then(response => {
-          const copy = response.clone();
-          caches.open(ASSET_CACHE).then(cache => cache.put(request, copy));
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(ASSET_CACHE).then(cache => cache.put(request, copy));
+          }
           return response;
         });
       })
