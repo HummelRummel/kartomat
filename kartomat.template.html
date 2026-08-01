@@ -1301,6 +1301,9 @@
 
     let _runtimeConfig = null;
     let _supaClient = null;
+    // In-memory mirror of _adminState's persisted flag/key for this session,
+    // set once at startup below — read here rather than hitting localStorage
+    // on every call.
     let _adminMode = false;
     let _adminKey = null;
 
@@ -2788,6 +2791,33 @@
       localStorage.setItem(KNOWN_COLLECTIONS_KEY, JSON.stringify(registry));
     }
 
+    // ── Admin state module ──
+    // Owns admin persistence and lifecycle behind a small interface: is admin
+    // available, is admin active, enter, leave. Both entries are global and
+    // collection-independent, stored alongside the active-config and known-
+    // collections entries above — never nested inside a collection's registry
+    // record — so one stored key grants admin across every collection. Mode
+    // changes always take effect via a full reload (the same mechanism
+    // collection switching already uses), so these functions only persist
+    // state; the reload itself is the caller's job. There is exactly one code
+    // path that produces the admin interface (applyAdminMode, below, run at
+    // startup) and no inverse of it is written here.
+    const ADMIN_KEY_KEY = 'kartomat:adminKey';
+    const ADMIN_ACTIVE_KEY = 'kartomat:adminActive';
+
+    const _adminState = {
+      isAvailable() { return !!localStorage.getItem(ADMIN_KEY_KEY); },
+      isActive() { return localStorage.getItem(ADMIN_ACTIVE_KEY) === '1'; },
+      key() { return localStorage.getItem(ADMIN_KEY_KEY); },
+      enter(key) {
+        localStorage.setItem(ADMIN_KEY_KEY, key);
+        localStorage.setItem(ADMIN_ACTIVE_KEY, '1');
+      },
+      leave() {
+        localStorage.setItem(ADMIN_ACTIVE_KEY, '0');
+      }
+    };
+
     // ── Collection title module ──
     // Single entry point for every collection-title surface: the home title
     // and every per-screen bar. Given the current config and the known-
@@ -3027,11 +3057,19 @@
       }
 
       if (qAdminKey !== null) {
-        _adminMode = true;
-        _adminKey = qAdminKey;
+        _adminState.enter(qAdminKey);
         if (qUrl === null && qKey === null && qBucket === null) {
           history.replaceState(null, '', location.pathname);
         }
+      }
+
+      // The persisted flag alone decides whether admin mode is applied — an
+      // admin-key parameter above already sets it, but on every other start
+      // (including after a collection switch, which reloads) this is the
+      // only thing consulted.
+      if (_adminState.isActive()) {
+        _adminMode = true;
+        _adminKey = _adminState.key();
         applyAdminMode();
       }
 
