@@ -4,7 +4,7 @@ Mobile-first tool for creating card **fronts** at the festival. Front-only, uplo
 
 ## Build
 
-The source is `kartomat.template.html`. The build step (`scripts/build.py`) renders it to `index.html` — the file GitHub Pages serves as the directory default — and generates the service worker `sw.js`:
+The source is `kartomat.template.html`, plus `src/jpeg-comment-codec.js` — the one extracted module in an otherwise single-file app. The build step (`scripts/build.py`) renders the template to `index.html` (splicing the codec source in for the `{jpeg_comment_codec}` placeholder) — `index.html` is the file GitHub Pages serves as the directory default — and generates the service worker `sw.js`:
 
 ```
 make
@@ -13,7 +13,9 @@ make
 **Prerequisites:**
 - Python 3
 
-`index.html` and `sw.js` are build outputs but are committed, because GitHub Pages serves them directly from the repo. Rebuild and commit both whenever the template or `manifest.json` changes. `make clean` removes them.
+`index.html` and `sw.js` are build outputs but are committed, because GitHub Pages serves them directly from the repo. Rebuild and commit both whenever the template, `src/jpeg-comment-codec.js`, or `manifest.json` changes. `make clean` removes them.
+
+**Tests:** `src/jpeg-comment-codec.js` has a test suite at `test/jpeg-comment-codec.test.js`, run with the Node built-in test runner (`node --test test/`) — no dependencies, no package manifest. It is the only automated test coverage in the project; everything else is verified manually (see the PRDs under `issues/`).
 
 The font and background image are fetched at runtime from the configured Supabase bucket — see [Bucket assets](#bucket-assets) for the upload step.
 
@@ -138,6 +140,11 @@ Foreign cards show the originating collection's display name in place of the pub
 back to the raw bucket name, or "Unbekannt" for records with no bucket at all — and their thumbnail is
 shown at 50% opacity.
 
+Below the card list, a slim tappable **Künstlername line** — styled on the collection bar — shows the
+device's Künstlername (uppercased), or "Künstlername festlegen" when none is set. Tapping it opens the
+Künstlername sheet in editable mode (see [User identity](#user-identity)). It is always present and
+tappable, so the name can be set or changed independently of publishing, and it is hidden in admin mode.
+
 **Collection bar** — every other screen (gallery, card view, deleted gallery, deleted card view, and
 editor) shows a slim bar above its existing header, displaying the collection's short `name`. Tapping
 it opens the same bottom-sheet picker as the home title, with one exception: the editor's bar is
@@ -150,7 +157,12 @@ the bar is plain text with no chevron until the device knows more than one colle
 - *Galerie nicht verfügbar* — when the list or download fails.
 Only cards published with the new three-file bundle (`.thumb.jpeg` present) appear in the gallery; legacy JSON-only cards are not shown.
 
-**Card view screen** — a read-only full-screen view of a single published card, opened by tapping a gallery thumbnail. Shows the full-size published preview image. A **Herunterladen** button downloads the full-size JPEG (reusing the already-fetched blob — no extra network request; saved as `kartomat-<uuid>.jpeg`). Tapping the card image or any empty area beside the card (the backdrop) returns to the gallery. No editing or re-publishing from this screen.
+Each tile carries a **caption** below it showing the creator's Künstlername, read from the same
+thumbnail JPEG the tile already downloads (see [Cloud publish](#cloud-publish)) — no extra requests.
+Cards published before this feature carry no name and show "Unbekannt". Visible to ordinary visitors
+and admins alike; there is no separate admin grid.
+
+**Card view screen** — a read-only full-screen view of a single published card, opened by tapping a gallery thumbnail. Shows the full-size published preview image, with the creator's Künstlername (or "Unbekannt") captioned underneath, read from the same preview JPEG. A **Herunterladen** button downloads the full-size JPEG (reusing the already-fetched blob — no extra network request; saved as `kartomat-<uuid>.jpeg`). Tapping the card image or any empty area beside the card (the backdrop) returns to the gallery. No editing or re-publishing from this screen.
 
 **Starting a card** — on mobile, tapping **Karte erstellen** shows a chooser (Kamera / Galerie). On desktop, the file picker opens directly. After photo selection the editor opens immediately.
 
@@ -162,20 +174,32 @@ Only cards published with the new three-file bundle (`.thumb.jpeg` present) appe
 - **Zurück** — navigates to the home screen immediately when there are no unsaved changes; requires a two-tap "Änderungen verwerfen?" confirm when there are.
 - Bottom action bar — 2-column grid: **Speichern** + **Herunterladen** side-by-side on row 1; **Veröffentlichen** full-width on row 2.
 
-**Publish flow** — Tapping **Veröffentlichen** triggers a lockout check (fetch `lockout.json` from the
-`admin` bucket). The banner is anchored to the **bottom** of the editor, covering the action bar below
-it instead of shrinking the card preview above; it uses the page's own background colour, and a
-coloured left stripe is the only variant marker. Three outcomes:
+**Publish flow** — Tapping **Veröffentlichen** starts an auto-advancing gate chain; confirming a gate
+proceeds to the next, cancelling anywhere returns to the editor with nothing published, and the whole
+chain costs one press of Veröffentlichen:
+
+1. **Wrong-collection confirm** — only when the card belongs to another collection (see the
+   [wrong-collection guard](#flow) above); purely local, so declining costs no network round-trip.
+2. **Künstlername gate** — only when the device has no Künstlername set yet; opens the Künstlername
+   sheet in blocking mode (cancel and backdrop-dismiss suppressed). Saving a name resumes the chain
+   automatically — no second press of Veröffentlichen needed.
+3. **Lockout check** — fetches `lockout.json` from the `admin` bucket.
+4. **Content-policy banner** — states the publish policy and that the Künstlername is shown publicly.
+
+Steps 3–4 render as a banner anchored to the **bottom** of the editor, covering the action bar below it
+instead of shrinking the card preview above; it uses the page's own background colour, and a coloured
+left stripe is the only variant marker. Three outcomes:
 
 - **Connection error** — a banner ("Keine Verbindung", amber stripe) with an **Erneut versuchen**
   button. Publishing is blocked until the check succeeds; going offline cannot bypass this.
 - **User is locked out** — a locked-out banner ("Du bist gesperrt", red stripe). No confirm action is
   offered — this is a dead end.
 - **User is clear** — a content-policy banner (neutral stripe; text comes from
-  [`collection.json`](#collection-configuration-collectionjson)'s `policy` field). A **Bestätigen**
-  button completes the upload; a **Doch nicht** button dismisses the banner and cancels publishing.
+  [`collection.json`](#collection-configuration-collectionjson)'s `policy` field, plus a fixed line
+  stating the Künstlername is shown publicly). A **Bestätigen** button completes the upload; a
+  **Doch nicht** button dismisses the banner and cancels publishing.
 
-**Two-tap confirm** — Zurück uses this pattern when there are unsaved changes (relabels to "Änderungen verwerfen?"). Speichern is two-tap (relabels to "Wirklich?") only when overwriting an already-saved own card; a new card or a foreign-card fork is single-tap. Herunterladen is always single-tap.
+**Two-tap confirm** — Zurück uses this pattern when there are unsaved changes (relabels to "Änderungen verwerfen?"). Speichern is two-tap (relabels to "Wirklich?") only when overwriting an already-saved own card; a brand-new card is single-tap. Saving or publishing a card that belongs to another collection is no longer a silent single-tap fork — both now show the wrong-collection confirm banner first (see above), naming the collection the card came from and the one it is about to enter. Herunterladen is always single-tap.
 
 **Delete flow** — The trash button (🗑) on each home-list card branches on ownership and publish state:
 - **Foreign card** — single "delete locally" confirmation banner, then removes the local record only; the original in its own collection's cloud storage is untouched.
@@ -185,6 +209,16 @@ coloured left stripe is the only variant marker. Three outcomes:
   - **Lokal** — warning banner that the online copy can no longer be deleted or modified (it becomes orphaned), then removes only the local record.
 
 Inactivity auto-dismisses the revealed buttons and banners; tapping elsewhere cancels the flow.
+
+**Wrong-collection guard** — A card carried over from another collection forks into the active one the
+moment it is saved or published: a new `id` is minted, `bucket` is re-stamped, and publish state is
+cleared (see the `bucket` field in [Local storage](#local-storage)). Saving or publishing such a card
+now asks first, via a variant of the publish banner (bottom-anchored, coloured left stripe) that names
+both the collection the card came from and the one it is about to enter. Confirming forks exactly as
+before; declining leaves the card untouched and costs no network request. Collection display names
+resolve through the known-collections registry, falling back to the raw bucket name and then to
+"Unbekannt" for records with no bucket at all — the same chain the home screen's foreign-card badge
+uses.
 
 ## Local storage
 
@@ -217,6 +251,7 @@ predating the `bucket` field.
 | `kartomat_cfg` | The active `{url, key, bucket}`, written when a link is opened or a collection is picked from the switcher. |
 | `kartomat:knownCollections` | Every collection this device has successfully opened, keyed by bucket: connection details, the four resolved `collection.json` fields, and a last-used timestamp. Written only once both the assets and `collection.json` have loaded successfully; also serves as the offline fallback for `collection.json`. Feeds the [collection switcher](#flow). |
 | `kartomat:userId` | The anonymous per-device UUID — see [User identity](#user-identity). |
+| `kartomat:artistName` | The device's Künstlername, `null` until set — see [User identity](#user-identity). |
 | `kartomat:etag:<url>` | Cached asset validator used to detect a changed background/font. |
 | `kartomat:adminKey` | The admin key, once supplied via `?adminkey=`. Collection-independent — one key works across every collection — and kept on logout, so the [entry gesture](#admin-mode) can use it again. |
 | `kartomat:adminActive` | The on/off flag for admin mode. Consulted on every start; survives reloads, collection switches, and closing the app until explicit logout clears it. |
@@ -229,9 +264,37 @@ a one-time cleanup on first load.
 
 ## User identity
 
-On first launch the app generates a `crypto.randomUUID()` and stores it in localStorage under `kartomat:userId`. This anonymous UUID is stable across sessions (until the user clears site data) and is attached to every published card as `creatorId` in the JSON bundle.
+Two identities exist, deliberately kept separate:
+
+**The anonymous UUID.** On first launch the app generates a `crypto.randomUUID()` and stores it in
+localStorage under `kartomat:userId`. This UUID is stable across sessions (until the user clears site
+data) and is attached to every published card as `creatorId`. It is the **sole moderation identity** —
+every lockout, unlock, and "Ersteller unbekannt" path keys on it — because it cannot be edited by the
+user.
 
 Cards published before this feature was introduced carry no `creatorId` and are treated as **"Ersteller unbekannt"** in admin actions — they cannot be used to lock out a creator.
+
+**The Künstlername.** A human-readable display name, freely editable and therefore never used for
+moderation. Device-global (stored under `kartomat:artistName`, separate from and independent of the
+active collection — switching collections keeps it) and `null` until the user sets one; it is never
+auto-generated. It is requested the first time the user publishes without one (the Künstlername gate in
+the [publish flow](#flow)), and can be set or changed any time before that via the tappable line on the
+[home screen](#flow), which opens a bottom-sheet editor (reusing the photo-chooser overlay's markup and
+styling). The editor has two modes: **editable** (cancel and backdrop-dismiss available, used from the
+home line) and **blocking** (both suppressed, used by the publish gate; saving resumes the publish flow
+via a continuation callback). Validation: trimmed, newlines stripped, empty or whitespace-only rejected,
+capped at 20 characters — the save action is disabled while invalid. Stored as typed; displayed
+uppercase via CSS. The helper text states both that the name is shown publicly and that it applies to
+every future publish.
+
+**Rename is a snapshot, not a rewrite.** The name is *not* stored on the local card record — it is read
+from `kartomat:artistName` at publish time and stamped onto the card's bundle and JPEGs then. Changing
+the name only affects subsequent publishes; already-published cards keep the name they were published
+under, with no backfill.
+
+**Public visibility.** The Künstlername is shown under every gallery tile and in both card detail
+views, for ordinary visitors and admins alike (see [Flow](#flow) and [Admin mode](#admin-mode)) — it is
+not a private label. The publish content-policy banner states this explicitly.
 
 ## Cloud publish
 
@@ -243,9 +306,25 @@ Publishing uploads three objects under the `front/` prefix, in this order:
 
 | Path | Content |
 |---|---|
-| `front/kartomat-<uuid>.json` | Front-bundle JSON (`version:1, side:'front', title, desc, userScale, offsetXFrac, offsetYFrac, photo, referenceJpeg, creatorId`) |
+| `front/kartomat-<uuid>.json` | Front-bundle JSON (`version:1, side:'front', title, desc, userScale, offsetXFrac, offsetYFrac, photo, referenceJpeg, creatorId, creatorName`) |
 | `front/kartomat-<uuid>.jpeg` | Full-size preview — trim-cropped card front, JPEG q0.9 |
-| `front/kartomat-<uuid>.thumb.jpeg` | Grid thumbnail (~200 px wide) written **last** |
+| `front/kartomat-<uuid>.thumb.jpeg` | Grid thumbnail (200 px wide, JPEG q0.5 — reduced from a higher quality so the gallery costs meaningfully less to load) written **last** |
+
+The bundle version is unchanged; `creatorName` is additive and older bundles simply lack it. The bundle
+remains the durable record even though nothing reads the name from it at runtime — see below.
+
+**JPEG comment payload.** Both uploaded JPEGs — the full-size preview and the thumbnail — carry a
+compact JSON payload (`{n: creatorName, id: creatorId}`, roughly 50 bytes) spliced into a JPEG comment
+segment immediately after the start-of-image marker, via `embedJpegComment`/`readCreatorInfo` in
+`src/jpeg-comment-codec.js` (see [Build](#build) for how it's inlined, and its test suite for the byte-
+level edge cases it guards against — multi-byte UTF-8 names, truncated or malformed segments, oversized
+payloads). Browsers ignore comment segments, so rendering is unaffected, and Supabase Storage is
+byte-exact, so the payload survives the round trip. Because every gallery tile already downloads the
+thumbnail and every detail view already downloads the full-size preview, both read the creator's name
+and id straight from bytes already in memory — **zero extra network requests**, and this is what lets
+the admin flows skip downloading the bundle (see [Admin mode](#admin-mode)). Thumbnail generation
+produces a blob first so the comment splice operates on bytes, with the locally-stored thumbnail's data
+URL derived from that same blob (it doesn't carry the payload — it's always the user's own card).
 
 The thumbnail is written last so a card only becomes visible in the gallery once its JSON and preview are already in place — no half-published tiles appear. The UUID is stable across edits, so re-publishing overwrites the same three objects (`upsert: true`) rather than creating duplicates.
 
@@ -334,13 +413,20 @@ else.
 
 - Home title changes from `(K)artomat` to `(K)admin`.
 - A fixed red banner reading **"(K)ADMIN — Admin-Modus aktiv"** is visible on every screen.
-- The **Karte erstellen** button and local card list are hidden. A **Gelöschte Galerie** button appears in their place.
+- The **Karte erstellen** button, local card list, and Künstlername line are hidden. A **Gelöschte Galerie** button appears in their place.
 
 ### Deleting a card
 
+Both the main card view (admin and ordinary visitors alike) and the Deleted Gallery's card view caption
+the creator's Künstlername under the image, same as the public gallery.
+
 In admin mode each card detail view shows a **Löschen und/oder sperren** button at the top (instead of
 Herunterladen). Tapping it hides the trigger and puts three option buttons in its place (no separate
-panel heading — the trigger's own label already supplies that context):
+panel heading — the trigger's own label already supplies that context). The panel opens instantly: the
+creator id comes from the JPEG comment payload already read for the caption (see
+[Cloud publish](#cloud-publish)), falling back to downloading the bundle only when the payload is
+absent — i.e. for a card published before this feature — so moderation is no longer gated on a bundle
+download.
 
 - **Löschen & sperren** — moves the three card files to `front-deleted/` and adds the creator's UUID to `lockout.json`. Requires a second confirming tap (relabels to **"Wirklich sperren?"**). Disabled (shown as **"Schon gesperrt"**) if the creator is already locked; disabled (shown as **"Ersteller unbekannt"**) for legacy cards without a `creatorId`.
 - **Nur löschen** — moves the three card files to `front-deleted/`. Requires a second confirming tap (relabels to **"Wirklich löschen?"**).
@@ -355,7 +441,10 @@ Tapping the card image or any empty area beside the card (the backdrop) returns 
 
 ### Deleted Gallery
 
-The **Gelöschte Galerie** screen lists cards in `front-deleted/`. Opening a deleted card shows two action buttons:
+The **Gelöschte Galerie** screen lists cards in `front-deleted/`, with the same Künstlername captions as
+the main gallery. Opening a deleted card shows two action buttons. As with the delete panel above, the
+creator id is read from the deleted preview JPEG's comment payload, falling back to a bundle download
+only when the payload is absent:
 
 - **Wiederherstellen** — moves the three files back to `front/`. If the creator is currently locked out, the lock is automatically removed. Requires a confirm step.
 - **Ersteller entsperren** — removes the creator's UUID from `lockout.json` without restoring the card. Available only when the creator is actually on the lockout list; disabled for legacy cards with no `creatorId`. Requires a confirm step.
