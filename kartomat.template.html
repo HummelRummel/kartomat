@@ -1689,7 +1689,7 @@
       el.className = 'publish-banner';
     }
 
-    function showPublishBanner(type) {
+    function showPublishBanner(type, statement) {
       const bannerEl   = document.getElementById('publishBanner');
       const titleEl    = document.getElementById('publishBannerTitle');
       const bodyEl     = document.getElementById('publishBannerBody');
@@ -1697,7 +1697,14 @@
       bannerEl.className = 'publish-banner';
       actionsEl.innerHTML = '';
 
-      if (type === 'policy') {
+      if (type === 'publishDisabled') {
+        // Dead-end variant: same red stripe as the lockout banner, but no
+        // confirm action — there is nothing to push through, only the
+        // admin's statement to read.
+        bannerEl.classList.add('locked');
+        titleEl.textContent = 'Veröffentlichen nicht möglich.';
+        bodyEl.textContent  = statement;
+      } else if (type === 'policy') {
         const lines = config.policy.split('\n');
         titleEl.textContent = lines[0];
         bodyEl.textContent  = lines.slice(1).join('\n') +
@@ -1768,6 +1775,13 @@
     // Veröffentlichen carries the user through the whole chain.
 
     function startPublishFlow() {
+      // Instant local refusal, ahead of every other gate: a hard block must
+      // never arrive after the user has confirmed a collection and typed a
+      // name. Runs before any typing and before any network request.
+      if (config.disable_publish && !_adminMode) {
+        showPublishBanner('publishDisabled', config.disable_publish_statement);
+        return;
+      }
       runForeignGuard();
     }
 
@@ -1795,9 +1809,13 @@
       btn.classList.remove('btn-action-primary');
       btn.innerHTML = '<span class="btn-spinner"></span>Prüfen…';
 
-      let lockoutList;
+      let lockoutList, flags;
       try {
-        lockoutList = await fetchLockoutList();
+        // Run alongside the lockout fetch rather than after it, so the fresh
+        // flag re-verify adds no extra round-trip. fetchFreshCollectionFlags()
+        // never rejects — it falls back to the startup-loaded config on any
+        // failure — so only the lockout fetch can fail this Promise.all.
+        [lockoutList, flags] = await Promise.all([fetchLockoutList(), fetchFreshCollectionFlags()]);
       } catch (e) {
         btn.textContent = 'Veröffentlichen';
         showPublishBanner('noconn');
@@ -1805,6 +1823,10 @@
       }
 
       btn.textContent = 'Veröffentlichen';
+      if (flags.disable_publish && !_adminMode) {
+        showPublishBanner('publishDisabled', flags.disable_publish_statement);
+        return;
+      }
       const isLocked = Array.isArray(lockoutList) && lockoutList.some(entry => entry.id === userId);
       showPublishBanner(isLocked ? 'locked' : 'policy');
     }
