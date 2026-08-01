@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="31b8fdea2b28">
+  <meta name="build-version" content="57b6fa2a84ad">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1715,7 +1715,9 @@ if (typeof module !== 'undefined' && module.exports) {
       if (!_runtimeConfig) return null;
       if (typeof window.supabase === 'undefined' || typeof window.supabase.createClient !== 'function') return null;
       const key = (_adminMode && _adminKey) ? _adminKey : _runtimeConfig.key;
-      _supaClient = window.supabase.createClient(_runtimeConfig.url, key);
+      _supaClient = window.supabase.createClient(_runtimeConfig.url, key, {
+        global: { fetch: (url, opts) => fetch(url, Object.assign({}, opts, { cache: 'no-store' })) }
+      });
       return _supaClient;
     }
 
@@ -3113,14 +3115,13 @@ if (typeof module !== 'undefined' && module.exports) {
       twoTapControl.tap(document.getElementById('backBtn'), 'Änderungen verwerfen?', () => showScreen('home'));
     });
 
-    document.getElementById('galleryBtn').addEventListener('click', async () => {
+    document.getElementById('galleryBtn').addEventListener('click', () => {
       if (_adminMode) { showScreen('gallery'); return; }
-      const flags = await fetchFreshCollectionFlags();
-      if (flags.disable_gallery) {
-        openGalleryDisabledSheet(flags.disable_gallery_statement);
+      if (config.disable_gallery) {
+        openGalleryDisabledSheet(config.disable_gallery_statement);
         return;
       }
-      _galleryFestivalMode = flags.festival_mode;
+      _galleryFestivalMode = config.festival_mode;
       showScreen('gallery');
     });
     document.getElementById('galleryBackBtn').addEventListener('click', () => showScreen('home'));
@@ -3407,7 +3408,7 @@ if (typeof module !== 'undefined' && module.exports) {
       const blob = new Blob([JSON.stringify(merged)], { type: 'application/json' });
       const { error: uploadErr } = await client.storage
         .from(bucket)
-        .upload('collection.json', blob, { contentType: 'application/json', upsert: true });
+        .upload('collection.json', blob, { contentType: 'application/json', upsert: true, cacheControl: '0' });
       if (uploadErr) throw uploadErr;
 
       config = Object.assign({}, config, resolveCollectionFlags(merged));
@@ -3755,7 +3756,7 @@ if (typeof module !== 'undefined' && module.exports) {
       const [bgOutcome, fontOutcome, configOutcome] = await Promise.allSettled([
         fetch(bgUrl, { headers: _authHeaders() }),
         fetch(fontUrl, { headers: _authHeaders() }),
-        fetch(configUrl, { headers: _authHeaders() })
+        fetch(configUrl, { headers: _authHeaders(), cache: 'no-store' })
       ]);
       if (bgOutcome.status === 'rejected') throw bgOutcome.reason;
       if (fontOutcome.status === 'rejected') throw fontOutcome.reason;
@@ -3811,7 +3812,7 @@ if (typeof module !== 'undefined' && module.exports) {
     // can uniformly treat "couldn't check" the same as "nothing changed".
     async function _fetchCollectionJson() {
       try {
-        const res = await fetch(_collectionConfigUrl(), { headers: _authHeaders() });
+        const res = await fetch(_collectionConfigUrl(), { headers: _authHeaders(), cache: 'no-store' });
         if (!res.ok) return null;
         return await res.json();
       } catch (e) {
