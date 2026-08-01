@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="cbb4281d2ad2">
+  <meta name="build-version" content="cf9511e61c6a">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -152,6 +152,37 @@
       display: inline;
     }
 
+    /* ── Künstlername home line (shares collection-bar's look, always tappable) ── */
+
+    .kuenstlername-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 480px;
+      min-height: 40px;
+      flex-shrink: 0;
+      margin-top: 20px;
+      padding: 10px 18px;
+      background: none;
+      border: none;
+      border-top: 1px solid var(--divider);
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .kuenstlername-bar .collection-bar-chevron {
+      display: inline;
+    }
+
     /* ── Editor ── */
 
     #editor {
@@ -207,6 +238,36 @@
       transition: background .1s;
     }
     .photo-chooser-btn:active { background: #3a3a3a; }
+    .photo-chooser-btn:disabled { opacity: .3; cursor: default; }
+
+    .kuenstlername-label {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .kuenstlername-input {
+      background: #2a2a2a;
+      color: var(--text);
+      border: none;
+      border-radius: 6px;
+      padding: 14px 16px;
+      font-size: 16px;
+      font-family: system-ui, -apple-system, sans-serif;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .kuenstlername-input:focus { outline: 2px solid var(--muted); outline-offset: -2px; }
+
+    .kuenstlername-helper {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      margin: 0;
+    }
 
     .photo-chooser-cancel {
       background: none;
@@ -961,6 +1022,17 @@
     </div>
   </div>
 
+  <!-- Künstlername editor (reuses the photo-chooser overlay/sheet styling) -->
+  <div id="kuenstlernameSheet" class="photo-chooser-overlay" style="display:none" role="dialog" aria-modal="true">
+    <div class="photo-chooser-sheet">
+      <label class="kuenstlername-label" for="kuenstlernameInput">Künstlername</label>
+      <input type="text" id="kuenstlernameInput" class="kuenstlername-input" maxlength="20" autocomplete="off" spellcheck="false">
+      <p class="kuenstlername-helper">Dein Künstlername ist öffentlich sichtbar und gilt für jede Karte, die du ab jetzt veröffentlichst.</p>
+      <button class="photo-chooser-btn" id="kuenstlernameSaveBtn" disabled>Speichern</button>
+      <button class="photo-chooser-cancel" id="kuenstlernameCancelBtn">Abbrechen</button>
+    </div>
+  </div>
+
   <!-- Hidden export canvas at full card resolution -->
   <canvas id="exportCanvas" width="803" height="1110" style="display:none"></canvas>
 
@@ -1018,6 +1090,10 @@
       <button class="btn-primary" id="createBtn">Karte erstellen</button>
     </div>
     <div id="cardList" class="card-list"></div>
+    <button type="button" class="kuenstlername-bar" id="kuenstlernameBar">
+      <span id="kuenstlernameBarText"></span>
+      <span class="collection-bar-chevron" aria-hidden="true">⌄</span>
+    </button>
   </div>
 
   <!-- ── Gallery ── -->
@@ -1325,6 +1401,20 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!userId) {
       userId = crypto.randomUUID();
       localStorage.setItem(_USER_ID_KEY, userId);
+    }
+
+    // ── Künstlername (device-global display name, collection-independent) ──
+    // null until the user sets one; never auto-generated; never written onto
+    // the local card record — read from this key at publish time instead.
+
+    const ARTIST_NAME_KEY = 'kartomat:artistName';
+
+    function getArtistName() {
+      return localStorage.getItem(ARTIST_NAME_KEY);
+    }
+
+    function setArtistName(name) {
+      localStorage.setItem(ARTIST_NAME_KEY, name);
     }
 
     // ── Publish-state fingerprint ──
@@ -2253,7 +2343,13 @@ if (typeof module !== 'undefined' && module.exports) {
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    function renderKuenstlernameBar() {
+      const name = getArtistName();
+      document.getElementById('kuenstlernameBarText').textContent = name || 'Künstlername festlegen';
+    }
+
     async function renderHomeList() {
+      renderKuenstlernameBar();
       if (_adminMode) return;
       const homeEl = document.getElementById('home');
       const listEl = document.getElementById('cardList');
@@ -3003,6 +3099,68 @@ if (typeof module !== 'undefined' && module.exports) {
       if (e.target === document.getElementById('collectionSwitcher')) closeCollectionSwitcher();
     });
 
+    // ── Künstlername sheet ──
+    // Editable mode only here: cancel and backdrop-dismiss both available,
+    // cancelling changes nothing. A later blocking mode (used by the publish
+    // gate) suppresses both and takes a continuation callback — opts is
+    // threaded through now so that mode drops in without reshaping this.
+
+    const kuenstlernameSheet   = document.getElementById('kuenstlernameSheet');
+    const kuenstlernameInput   = document.getElementById('kuenstlernameInput');
+    const kuenstlernameSaveBtn = document.getElementById('kuenstlernameSaveBtn');
+    let _kuenstlernameOnSaved = null;
+
+    function cleanArtistNameInput(raw) {
+      return String(raw || '').replace(/[\r\n]/g, '').trim().slice(0, 20);
+    }
+
+    function updateKuenstlernameSaveBtn() {
+      kuenstlernameSaveBtn.disabled = !cleanArtistNameInput(kuenstlernameInput.value);
+    }
+
+    function openKuenstlernameSheet(opts) {
+      opts = opts || {};
+      kuenstlernameInput.value = getArtistName() || '';
+      updateKuenstlernameSaveBtn();
+      kuenstlernameSheet.dataset.blocking = opts.blocking ? '1' : '0';
+      _kuenstlernameOnSaved = opts.onSaved || null;
+      kuenstlernameSheet.style.display = 'flex';
+      kuenstlernameInput.focus();
+    }
+
+    function closeKuenstlernameSheet() {
+      kuenstlernameSheet.style.display = 'none';
+    }
+
+    kuenstlernameInput.addEventListener('input', () => {
+      const stripped = kuenstlernameInput.value.replace(/[\r\n]/g, '');
+      if (stripped !== kuenstlernameInput.value) kuenstlernameInput.value = stripped;
+      updateKuenstlernameSaveBtn();
+    });
+
+    kuenstlernameSaveBtn.addEventListener('click', () => {
+      const cleaned = cleanArtistNameInput(kuenstlernameInput.value);
+      if (!cleaned) return;
+      setArtistName(cleaned);
+      closeKuenstlernameSheet();
+      renderKuenstlernameBar();
+      const onSaved = _kuenstlernameOnSaved;
+      _kuenstlernameOnSaved = null;
+      if (onSaved) onSaved();
+    });
+
+    document.getElementById('kuenstlernameCancelBtn').addEventListener('click', () => {
+      if (kuenstlernameSheet.dataset.blocking === '1') return;
+      closeKuenstlernameSheet();
+    });
+    kuenstlernameSheet.addEventListener('click', (e) => {
+      if (e.target !== kuenstlernameSheet) return;
+      if (kuenstlernameSheet.dataset.blocking === '1') return;
+      closeKuenstlernameSheet();
+    });
+
+    document.getElementById('kuenstlernameBar').addEventListener('click', () => openKuenstlernameSheet());
+
     // ── Admin entry gesture ──
     // Three taps within a short window on the app-name heading. With no
     // stored admin key this is a complete no-op — no visible response of
@@ -3159,6 +3317,7 @@ if (typeof module !== 'undefined' && module.exports) {
       document.querySelector('.app-name').textContent = '(K)admin';
       document.getElementById('createBtn').style.display = 'none';
       document.getElementById('cardList').style.display = 'none';
+      document.getElementById('kuenstlernameBar').style.display = 'none';
       document.getElementById('deletedGalleryBtn').style.display = '';
       document.getElementById('cardViewDownloadBtn').style.display = 'none';
       document.getElementById('cardViewDeleteBtn').style.display = '';
