@@ -269,6 +269,14 @@
       margin: 0;
     }
 
+    .gallery-disabled-text {
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.5;
+      white-space: pre-line;
+      margin: 4px 4px 0;
+    }
+
     .photo-chooser-cancel {
       background: none;
       color: var(--muted);
@@ -1067,6 +1075,14 @@
     </div>
   </div>
 
+  <!-- Gallery-disabled statement (reuses the photo-chooser overlay/sheet styling) -->
+  <div id="galleryDisabledSheet" class="photo-chooser-overlay" style="display:none" role="dialog" aria-modal="true">
+    <div class="photo-chooser-sheet">
+      <p class="gallery-disabled-text" id="galleryDisabledText"></p>
+      <button class="photo-chooser-btn" id="galleryDisabledDismissBtn">Schließen</button>
+    </div>
+  </div>
+
   <!-- Hidden export canvas at full card resolution -->
   <canvas id="exportCanvas" width="803" height="1110" style="display:none"></canvas>
 
@@ -1256,6 +1272,10 @@
     let _currentScreen = null;
     let _galleryLoaded = false;
     let _galleryScrollTop = 0;
+    // Resolved by the Galerie-tap flag fetch, below, and read by loadGallery()
+    // when it builds the tiles — the single fresh request that decides both
+    // the gallery-disabled and festival-mode outcomes for this tap.
+    let _galleryFestivalMode = false;
     let _deletedGalleryLoaded = false;
     let _deletedGalleryScrollTop = 0;
 
@@ -2682,7 +2702,7 @@
         cell._galleryImg = img;
         cell._galleryCaption = caption;
         cell._galleryKey = 'front/' + entry.name;
-        if (uuid) {
+        if (uuid && !_galleryFestivalMode) {
           cell.style.cursor = 'pointer';
           cell.addEventListener('click', () => {
             showScreen('cardView');
@@ -2851,7 +2871,16 @@
       twoTapControl.tap(document.getElementById('backBtn'), 'Änderungen verwerfen?', () => showScreen('home'));
     });
 
-    document.getElementById('galleryBtn').addEventListener('click', () => showScreen('gallery'));
+    document.getElementById('galleryBtn').addEventListener('click', async () => {
+      if (_adminMode) { showScreen('gallery'); return; }
+      const flags = await fetchFreshCollectionFlags();
+      if (flags.disable_gallery) {
+        openGalleryDisabledSheet(flags.disable_gallery_statement);
+        return;
+      }
+      _galleryFestivalMode = flags.festival_mode;
+      showScreen('gallery');
+    });
     document.getElementById('galleryBackBtn').addEventListener('click', () => showScreen('home'));
     document.getElementById('cardViewImg').addEventListener('click', () => showScreen('gallery'));
     document.querySelector('#cardView .card-view-body').addEventListener('click', e => { if (e.target === e.currentTarget) showScreen('gallery'); });
@@ -3238,6 +3267,29 @@
 
     document.getElementById('kuenstlernameBar').addEventListener('click', () => openKuenstlernameSheet());
 
+    // ── Gallery-disabled statement sheet ──
+    // Opened by the Galerie handler instead of navigating, when disable_gallery
+    // is on for a non-admin — the button stays visible and tappable because it
+    // is the only delivery route for the statement.
+
+    const galleryDisabledSheet      = document.getElementById('galleryDisabledSheet');
+    const galleryDisabledText       = document.getElementById('galleryDisabledText');
+    const galleryDisabledDismissBtn = document.getElementById('galleryDisabledDismissBtn');
+
+    function openGalleryDisabledSheet(statement) {
+      galleryDisabledText.textContent = statement;
+      galleryDisabledSheet.style.display = 'flex';
+    }
+
+    function closeGalleryDisabledSheet() {
+      galleryDisabledSheet.style.display = 'none';
+    }
+
+    galleryDisabledDismissBtn.addEventListener('click', closeGalleryDisabledSheet);
+    galleryDisabledSheet.addEventListener('click', (e) => {
+      if (e.target === galleryDisabledSheet) closeGalleryDisabledSheet();
+    });
+
     // ── Admin entry gesture ──
     // Three taps within a short window on the app-name heading. With no
     // stored admin key this is a complete no-op — no visible response of
@@ -3350,6 +3402,29 @@
       _bgObjectUrl = URL.createObjectURL(bgBlob);
       bgImg.src = _bgObjectUrl;
       document.getElementById('cardFull').style.backgroundImage = 'url("' + _bgObjectUrl + '")';
+    }
+
+    // Re-reads collection.json fresh from the bucket and resolves the five
+    // flag values through resolveCollectionFlags(), so a flag flipped from
+    // another device reaches a client that already has the app open. Falls
+    // back to the startup-loaded values in `config` — never mutated after
+    // loadAssets() — on any offline, HTTP, or parse failure, so a failed
+    // check can never break the action the user just took.
+    async function fetchFreshCollectionFlags() {
+      try {
+        const res = await fetch(_collectionConfigUrl(), { headers: _authHeaders() });
+        if (!res.ok) throw new Error('collection.json: HTTP ' + res.status);
+        const json = await res.json();
+        return resolveCollectionFlags(json);
+      } catch (e) {
+        return {
+          festival_mode:              config.festival_mode,
+          disable_gallery:            config.disable_gallery,
+          disable_gallery_statement:  config.disable_gallery_statement,
+          disable_publish:            config.disable_publish,
+          disable_publish_statement:  config.disable_publish_statement
+        };
+      }
     }
 
     async function checkAssetEtags() {
