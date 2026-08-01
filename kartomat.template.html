@@ -689,10 +689,18 @@
       cursor: pointer;
     }
 
+    .cardview-header {
+      position: relative;
+      overflow: visible;
+    }
+
     #deletePanel {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
-      flex-shrink: 0;
-      background: var(--surface);
+      z-index: 500;
+      background: var(--bg);
       border-left: 3px solid #e85d4c;
       padding: 10px 14px;
       display: flex;
@@ -1029,17 +1037,17 @@
       <span class="collection-bar-text"></span>
       <span class="collection-bar-chevron" aria-hidden="true">⌄</span>
     </button>
-    <header class="gallery-header">
+    <header class="gallery-header cardview-header">
       <button class="btn-action" id="cardViewDownloadBtn">Herunterladen</button>
       <button class="btn-action" id="cardViewDeleteBtn" style="display:none">Löschen und/oder sperren</button>
-    </header>
-    <div id="deletePanel" hidden>
-      <div class="delete-panel-actions">
-        <button class="btn-action" id="deleteLockBtn">Löschen &amp; sperren</button>
-        <button class="btn-action" id="deleteOnlyBtn">Nur löschen</button>
-        <button class="btn-action" id="deleteCancelBtn">Abbrechen</button>
+      <div id="deletePanel" hidden>
+        <div class="delete-panel-actions">
+          <button class="btn-action" id="deleteLockBtn">Löschen &amp; sperren</button>
+          <button class="btn-action" id="deleteOnlyBtn">Nur löschen</button>
+          <button class="btn-action" id="deleteCancelBtn">Abbrechen</button>
+        </div>
       </div>
-    </div>
+    </header>
     <div class="card-view-body">
       <img id="cardViewImg" alt="" />
     </div>
