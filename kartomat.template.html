@@ -55,6 +55,25 @@
       margin-bottom: 36px;
       text-transform: uppercase;
     }
+    button.slash-accent {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: default;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button.slash-accent:not(:disabled) {
+      cursor: pointer;
+    }
+    .slash-accent-chevron {
+      display: none;
+      font-size: 10px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    button.slash-accent:not(:disabled) .slash-accent-chevron {
+      display: inline;
+    }
 
     .app-name {
       font-family: 'Nove', system-ui, sans-serif;
@@ -64,14 +83,18 @@
       letter-spacing: .03em;
       line-height: 1;
       margin-bottom: 20px;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .app-tagline {
       color: var(--muted);
+      font-family: 'Nove', system-ui, sans-serif;
       font-size: 15px;
       line-height: 1.55;
       max-width: 300px;
-      margin-bottom: 52px;
+      margin-bottom: 8px;
+      white-space: pre-line;
     }
 
     .btn-primary {
@@ -90,6 +113,75 @@
       -webkit-tap-highlight-color: transparent;
     }
     .btn-primary:active { opacity: .82; }
+
+    /* ── Collection bar ── */
+
+    .collection-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 40px;
+      flex-shrink: 0;
+      padding: 10px 18px;
+      background: var(--bg);
+      border: none;
+      border-bottom: 1px solid var(--divider);
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: center;
+      cursor: default;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .collection-bar:not(:disabled) {
+      cursor: pointer;
+    }
+    .collection-bar-chevron {
+      display: none;
+      font-size: 10px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .collection-bar:not(:disabled) .collection-bar-chevron {
+      display: inline;
+    }
+
+    /* ── Künstlername home line (shares collection-bar's look, always tappable) ── */
+
+    .kuenstlername-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 480px;
+      min-height: 40px;
+      flex-shrink: 0;
+      margin-top: 20px;
+      padding: 10px 18px;
+      background: none;
+      border: none;
+      border-top: 1px solid var(--divider);
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .kuenstlername-bar .collection-bar-chevron {
+      display: inline;
+    }
 
     /* ── Editor ── */
 
@@ -146,6 +238,76 @@
       transition: background .1s;
     }
     .photo-chooser-btn:active { background: #3a3a3a; }
+    .photo-chooser-btn:disabled { opacity: .3; cursor: default; }
+
+    .kuenstlername-label {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .kuenstlername-input {
+      background: #2a2a2a;
+      color: var(--text);
+      border: none;
+      border-radius: 6px;
+      padding: 14px 16px;
+      font-size: 16px;
+      font-family: system-ui, -apple-system, sans-serif;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .kuenstlername-input:focus { outline: 2px solid var(--muted); outline-offset: -2px; }
+
+    .kuenstlername-helper {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    .gallery-disabled-text {
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.5;
+      white-space: pre-line;
+      margin: 4px 4px 0;
+    }
+
+    /* ── Admin settings sheet ── */
+
+    .settings-sheet {
+      max-height: min(85vh, 640px);
+      overflow-y: auto;
+    }
+
+    #adminSettingsSheet .btn-action.armed { font-weight: 700; }
+
+    .settings-textarea {
+      background: #2a2a2a;
+      color: var(--text);
+      border: none;
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.4;
+      resize: vertical;
+      min-height: 64px;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .settings-textarea:focus { outline: 2px solid var(--muted); outline-offset: -2px; }
+
+    .settings-error {
+      color: #e85d4c;
+      font-size: 13px;
+      line-height: 1.4;
+      margin: 0;
+    }
 
     .photo-chooser-cancel {
       background: none;
@@ -161,12 +323,21 @@
     }
     .photo-chooser-cancel:active { color: var(--text); }
 
+    .photo-chooser-btn.switcher-active { font-weight: 700; }
+
+    #collectionSwitcherList {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
     .editor-body {
       flex: 1;
       min-height: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      position: relative;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto auto;
+      justify-items: center;
       padding: 16px 12px 16px;
       gap: 14px;
       overflow: hidden;
@@ -525,6 +696,11 @@
       border-color: var(--muted);
     }
 
+    #cardViewDeleteBtn {
+      white-space: normal;
+      line-height: 1.3;
+    }
+
     /* ── Home CTA stack ── */
 
     .home-actions {
@@ -576,6 +752,11 @@
       gap: 8px;
     }
 
+    .gallery-cell {
+      display: flex;
+      flex-direction: column;
+    }
+
     .gallery-tile {
       aspect-ratio: 735 / 1042;
       background: var(--surface);
@@ -590,9 +771,25 @@
       display: block;
     }
 
+    .gallery-caption {
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      line-height: 14px;
+      height: 14px;
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     /* ── Card View screen ── */
 
-    #cardView {
+    #cardView,
+    #deletedCardView {
       flex-direction: column;
       height: 100dvh;
       overflow: hidden;
@@ -602,18 +799,54 @@
       flex: 1;
       min-height: 0;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       overflow: hidden;
       padding: 8px;
     }
 
-    #cardViewImg {
+    #cardViewImg,
+    #deletedCardViewImg {
       max-width: 100%;
-      max-height: 100%;
+      flex: 1;
+      min-height: 0;
       object-fit: contain;
       border-radius: 4px;
+      cursor: pointer;
     }
+
+    .card-view-caption {
+      flex-shrink: 0;
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .cardview-header {
+      position: relative;
+      overflow: visible;
+    }
+
+    #deletePanel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 500;
+      background: var(--bg);
+      border-left: 3px solid #e85d4c;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #deletePanel[hidden] { display: none; }
+    .delete-panel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
     /* ── Not configured ── */
 
@@ -716,6 +949,43 @@
       cursor: pointer;
     }
 
+    /* ── Publish banner ── */
+
+    .publish-banner {
+      position: absolute;
+      grid-row: 2 / 4;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 420px;
+      z-index: 500;
+      background: var(--bg);
+      border-radius: 3px;
+      border-left: 3px solid var(--muted);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+    }
+    .publish-banner[hidden] { display: none; }
+    .publish-banner-text { font-size: 13px; line-height: 1.5; }
+    .publish-banner-text strong {
+      display: block;
+      font-family: 'Nove', system-ui, sans-serif;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 3px;
+    }
+    .publish-banner-text span { color: var(--muted); white-space: pre-line; }
+    .publish-banner-actions { display: flex; gap: 8px; }
+    .publish-banner.locked { border-left-color: #e85d4c; }
+    .publish-banner.noconn { border-left-color: #b08a3e; }
+    .publish-banner.foreign { border-left-color: #7b8fa6; }
+
     /* ── Install banner ── */
 
     #installBanner {
@@ -759,6 +1029,46 @@
       cursor: pointer;
       padding: 0;
     }
+
+    /* ── Admin banner ── */
+    #adminBanner {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      background: #c00;
+      color: #fff;
+      text-align: center;
+      padding: 10px 16px;
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    body.admin-active #adminBanner { display: flex; align-items: center; justify-content: center; gap: 12px; }
+    #adminLogoutBtn {
+      flex-shrink: 0;
+      background: none;
+      border: 1px solid #fff;
+      border-radius: 3px;
+      color: #fff;
+      font-family: 'Nove', system-ui, sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    body.admin-active #loading,
+    body.admin-active #nocfg,
+    body.admin-active #gallery,
+    body.admin-active #cardView,
+    body.admin-active #deletedGallery,
+    body.admin-active #deletedCardView,
+    body.admin-active #editor { padding-top: 40px; }
+    body.admin-active #home { padding-top: 88px; }
   </style>
 
   <script async crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -778,6 +1088,49 @@
     </div>
   </div>
 
+  <!-- Collection switcher (reuses the photo-chooser overlay/sheet styling) -->
+  <div id="collectionSwitcher" class="photo-chooser-overlay" style="display:none" role="dialog" aria-modal="true">
+    <div class="photo-chooser-sheet">
+      <div id="collectionSwitcherList"></div>
+      <button class="photo-chooser-cancel" id="switcherCancelBtn">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- Künstlername editor (reuses the photo-chooser overlay/sheet styling) -->
+  <div id="kuenstlernameSheet" class="photo-chooser-overlay" style="display:none" role="dialog" aria-modal="true">
+    <div class="photo-chooser-sheet">
+      <label class="kuenstlername-label" for="kuenstlernameInput">Künstlername</label>
+      <input type="text" id="kuenstlernameInput" class="kuenstlername-input" maxlength="20" autocomplete="off" spellcheck="false">
+      <p class="kuenstlername-helper">Dein Künstlername ist öffentlich sichtbar und gilt für jede Karte, die du ab jetzt veröffentlichst.</p>
+      <button class="photo-chooser-btn" id="kuenstlernameSaveBtn" disabled>Speichern</button>
+      <button class="photo-chooser-cancel" id="kuenstlernameCancelBtn">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- Gallery-disabled statement (reuses the photo-chooser overlay/sheet styling) -->
+  <div id="galleryDisabledSheet" class="photo-chooser-overlay" style="display:none" role="dialog" aria-modal="true">
+    <div class="photo-chooser-sheet">
+      <p class="gallery-disabled-text" id="galleryDisabledText"></p>
+      <button class="photo-chooser-btn" id="galleryDisabledDismissBtn">Schließen</button>
+    </div>
+  </div>
+
+  <!-- Admin settings sheet (reuses the photo-chooser overlay/sheet styling) -->
+  <div id="adminSettingsSheet" class="photo-chooser-overlay" style="display:none" role="dialog" aria-modal="true">
+    <div class="photo-chooser-sheet settings-sheet">
+      <button type="button" class="btn-action settings-toggle" id="settingsFestivalModeBtn" data-flag="festival_mode" aria-pressed="false">Festival-Modus</button>
+      <button type="button" class="btn-action settings-toggle" id="settingsDisableGalleryBtn" data-flag="disable_gallery" aria-pressed="false">Galerie sperren</button>
+      <label class="kuenstlername-label" for="settingsDisableGalleryStatement">Hinweistext – Galerie gesperrt</label>
+      <textarea id="settingsDisableGalleryStatement" class="settings-textarea" rows="3" placeholder="Leer = Standardtext"></textarea>
+      <button type="button" class="btn-action settings-toggle" id="settingsDisablePublishBtn" data-flag="disable_publish" aria-pressed="false">Veröffentlichen sperren</button>
+      <label class="kuenstlername-label" for="settingsDisablePublishStatement">Hinweistext – Veröffentlichen gesperrt</label>
+      <textarea id="settingsDisablePublishStatement" class="settings-textarea" rows="3" placeholder="Leer = Standardtext"></textarea>
+      <p class="settings-error" id="settingsError" style="display:none"></p>
+      <button type="button" class="photo-chooser-btn" id="settingsSaveBtn">Speichern</button>
+      <button type="button" class="photo-chooser-cancel" id="settingsCancelBtn">Abbrechen</button>
+    </div>
+  </div>
+
   <!-- Hidden export canvas at full card resolution -->
   <canvas id="exportCanvas" width="803" height="1110" style="display:none"></canvas>
 
@@ -785,6 +1138,12 @@
   <div id="updateBanner" hidden>
     <span>Update verfügbar</span>
     <button id="updateBtn">Aktualisieren</button>
+  </div>
+
+  <!-- ── Admin banner ── -->
+  <div id="adminBanner">
+    <span>(K)Admin-Modus aktiv</span>
+    <button type="button" id="adminLogoutBtn">Abmelden</button>
   </div>
 
   <!-- ── Install banner ── -->
@@ -817,18 +1176,31 @@
 
   <!-- ── Home ── -->
   <div id="home" class="screen">
-    <div class="slash-accent" id="homeEvent"></div>
+    <button type="button" class="slash-accent" id="homeTitle" disabled>
+      <span id="homeTitleText"></span>
+      <span class="slash-accent-chevron" aria-hidden="true">⌄</span>
+    </button>
     <h1 class="app-name">(K)artomat</h1>
-    <p class="app-tagline" id="homeTagline"></p>
+    <p class="app-tagline" id="homeDescription"></p>
     <div class="home-actions">
       <button class="btn-action" id="galleryBtn">Galerie</button>
+      <button class="btn-action" id="deletedGalleryBtn" style="display:none">Gelöschte Galerie</button>
+      <button class="btn-action" id="adminSettingsBtn" style="display:none">Einstellungen</button>
       <button class="btn-primary" id="createBtn">Karte erstellen</button>
     </div>
     <div id="cardList" class="card-list"></div>
+    <button type="button" class="kuenstlername-bar" id="kuenstlernameBar">
+      <span id="kuenstlernameBarText"></span>
+      <span class="collection-bar-chevron" aria-hidden="true">⌄</span>
+    </button>
   </div>
 
   <!-- ── Gallery ── -->
   <div id="gallery" class="screen">
+    <button type="button" class="collection-bar" id="galleryCollectionBar" disabled>
+      <span class="collection-bar-text"></span>
+      <span class="collection-bar-chevron" aria-hidden="true">⌄</span>
+    </button>
     <header class="gallery-header">
       <button class="btn-action" id="galleryBackBtn">Zurück</button>
     </header>
@@ -840,17 +1212,63 @@
 
   <!-- ── Card View ── -->
   <div id="cardView" class="screen">
-    <header class="gallery-header">
-      <button class="btn-action" id="cardViewBackBtn">Zurück</button>
+    <button type="button" class="collection-bar" id="cardViewCollectionBar" disabled>
+      <span class="collection-bar-text"></span>
+      <span class="collection-bar-chevron" aria-hidden="true">⌄</span>
+    </button>
+    <header class="gallery-header cardview-header">
       <button class="btn-action" id="cardViewDownloadBtn">Herunterladen</button>
+      <button class="btn-action" id="cardViewDeleteBtn" style="display:none">Löschen und/oder sperren</button>
+      <div id="deletePanel" hidden>
+        <div class="delete-panel-actions">
+          <button class="btn-action" id="deleteLockBtn">Löschen &amp; sperren</button>
+          <button class="btn-action" id="deleteOnlyBtn">Nur löschen</button>
+          <button class="btn-action" id="deleteCancelBtn">Abbrechen</button>
+        </div>
+      </div>
     </header>
     <div class="card-view-body">
       <img id="cardViewImg" alt="" />
+      <div class="card-view-caption" id="cardViewCaption"></div>
+    </div>
+  </div>
+
+  <!-- ── Deleted Gallery ── -->
+  <div id="deletedGallery" class="screen">
+    <button type="button" class="collection-bar" id="deletedGalleryCollectionBar" disabled>
+      <span class="collection-bar-text"></span>
+      <span class="collection-bar-chevron" aria-hidden="true">⌄</span>
+    </button>
+    <header class="gallery-header">
+      <button class="btn-action" id="deletedGalleryBackBtn">Zurück</button>
+    </header>
+    <div class="gallery-body">
+      <div id="deletedGalleryState" class="gallery-state"></div>
+      <div id="deletedGalleryGrid" class="gallery-grid"></div>
+    </div>
+  </div>
+
+  <!-- ── Deleted Card View ── -->
+  <div id="deletedCardView" class="screen">
+    <button type="button" class="collection-bar" id="deletedCardViewCollectionBar" disabled>
+      <span class="collection-bar-text"></span>
+      <span class="collection-bar-chevron" aria-hidden="true">⌄</span>
+    </button>
+    <header class="gallery-header">
+      <button class="btn-action" id="deletedCardViewUnlockBtn" disabled>Ersteller entsperren</button>
+      <button class="btn-action" id="deletedCardViewRestoreBtn">Wiederherstellen</button>
+    </header>
+    <div class="card-view-body">
+      <img id="deletedCardViewImg" alt="" />
+      <div class="card-view-caption" id="deletedCardViewCaption"></div>
     </div>
   </div>
 
   <!-- ── Editor ── -->
   <div id="editor" class="screen">
+    <button type="button" class="collection-bar" id="editorCollectionBar" data-always-disabled="true" disabled>
+      <span class="collection-bar-text"></span>
+    </button>
     <header class="editor-header">
       <button class="btn-action" id="backBtn">Zurück</button>
       <button class="btn-action" id="changePhotoBtn">Foto ändern</button>
@@ -874,6 +1292,13 @@
         <input type="range" id="zoomSlider" min="1" max="4" step="0.01" value="1">
         <span class="zoom-icon">+</span>
       </div>
+      <div id="publishBanner" class="publish-banner" hidden>
+        <div class="publish-banner-text">
+          <strong id="publishBannerTitle"></strong>
+          <span id="publishBannerBody"></span>
+        </div>
+        <div class="publish-banner-actions" id="publishBannerActions"></div>
+      </div>
       <div class="action-bar">
         <button class="btn-action" id="saveBtn">Speichern</button>
         <button class="btn-action" id="downloadBtn">Herunterladen</button>
@@ -883,17 +1308,70 @@
   </div>
 
   <script>
+    // ── JPEG comment codec ──
+
+{jpeg_comment_codec}
+
+    // ── Collection flag resolution ──
+
+{collection_flags}
+
     // ── Screen router ──
 
+    let _currentScreen = null;
+    let _galleryLoaded = false;
+    let _galleryScrollTop = 0;
+    // Resolved by the Galerie-tap flag fetch, below, and read by loadGallery()
+    // when it builds the tiles — the single fresh request that decides both
+    // the gallery-disabled and festival-mode outcomes for this tap.
+    let _galleryFestivalMode = false;
+    let _deletedGalleryLoaded = false;
+    let _deletedGalleryScrollTop = 0;
+
     function showScreen(id) {
-      if (id !== 'gallery') revokeGalleryUrls();
+      const prev = _currentScreen;
+      const toCardViewFromGallery = id === 'cardView' && prev === 'gallery';
+      const returningToGallery = id === 'gallery' && prev === 'cardView';
+      const toDeletedCardView = id === 'deletedCardView' && prev === 'deletedGallery';
+      const returningToDeletedGallery = id === 'deletedGallery' && prev === 'deletedCardView';
+
+      if (id !== 'gallery' && !toCardViewFromGallery) revokeGalleryUrls();
       if (id !== 'cardView') revokeCardViewUrl();
+      if (id !== 'deletedGallery' && !toDeletedCardView) revokeDeletedGalleryUrls();
+      if (id !== 'deletedCardView') revokeDeletedCardViewUrl();
+
+      if (prev === 'gallery' && id !== 'gallery') {
+        _galleryScrollTop = document.querySelector('#gallery .gallery-body').scrollTop;
+      }
+      if (prev === 'deletedGallery' && id !== 'deletedGallery') {
+        _deletedGalleryScrollTop = document.querySelector('#deletedGallery .gallery-body').scrollTop;
+      }
+
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
+      _currentScreen = id;
       twoTapControl.reset();
-      if (id === 'home') renderHomeList();
+      resetPublishBanner();
+      if (id === 'home') { renderHomeList(); _galleryLoaded = false; _refreshCollectionConfigInBackground(); }
       if (id === 'home') _installCtrl.markEngaged();
-      if (id === 'gallery') loadGallery();
+      if (id === 'gallery') {
+        if (returningToGallery && _galleryLoaded) {
+          requestAnimationFrame(() => {
+            document.querySelector('#gallery .gallery-body').scrollTop = _galleryScrollTop;
+          });
+        } else {
+          loadGallery();
+        }
+      }
+      if (id === 'deletedGallery') {
+        if (returningToDeletedGallery && _deletedGalleryLoaded) {
+          requestAnimationFrame(() => {
+            document.querySelector('#deletedGallery .gallery-body').scrollTop = _deletedGalleryScrollTop;
+          });
+        } else {
+          loadDeletedGallery();
+        }
+      }
     }
 
     // ── Geometry constants (verbatim from hummelrummel-card-creator.html) ──
@@ -924,11 +1402,37 @@
       desc: '',
       photo: null,
       currentId: null,
-      cardEvent: null,
+      cardBucket: null,
       publishedAt: null,
       publishedFingerprint: null,
       dirty: false
     };
+
+    // ── One-time cleanup of the removed text-config keys ──
+    ['event', 'tagline', 'policy', 'bucket'].forEach(k => localStorage.removeItem('kartomat:' + k));
+
+    // ── Anonymous per-device identity ──
+
+    const _USER_ID_KEY = 'kartomat:userId';
+    let userId = localStorage.getItem(_USER_ID_KEY);
+    if (!userId) {
+      userId = crypto.randomUUID();
+      localStorage.setItem(_USER_ID_KEY, userId);
+    }
+
+    // ── Künstlername (device-global display name, collection-independent) ──
+    // null until the user sets one; never auto-generated; never written onto
+    // the local card record — read from this key at publish time instead.
+
+    const ARTIST_NAME_KEY = 'kartomat:artistName';
+
+    function getArtistName() {
+      return localStorage.getItem(ARTIST_NAME_KEY);
+    }
+
+    function setArtistName(name) {
+      localStorage.setItem(ARTIST_NAME_KEY, name);
+    }
 
     // ── Publish-state fingerprint ──
 
@@ -1029,12 +1533,20 @@
 
     let _runtimeConfig = null;
     let _supaClient = null;
+    // In-memory mirror of _adminState's persisted flag/key for this session,
+    // set once at startup below — read here rather than hitting localStorage
+    // on every call.
+    let _adminMode = false;
+    let _adminKey = null;
 
     function getSupabaseClient() {
       if (_supaClient) return _supaClient;
       if (!_runtimeConfig) return null;
       if (typeof window.supabase === 'undefined' || typeof window.supabase.createClient !== 'function') return null;
-      _supaClient = window.supabase.createClient(_runtimeConfig.url, _runtimeConfig.key);
+      const key = (_adminMode && _adminKey) ? _adminKey : _runtimeConfig.key;
+      _supaClient = window.supabase.createClient(_runtimeConfig.url, key, {
+        global: { fetch: (url, opts) => fetch(url, Object.assign({}, opts, { cache: 'no-store' })) }
+      });
       return _supaClient;
     }
 
@@ -1049,8 +1561,16 @@
         version: 1, side: 'front', title: state.title, desc: state.desc,
         userScale: state.userScale, offsetXFrac: state.offsetXFrac, offsetYFrac: state.offsetYFrac,
         photo: state.img ? state.img.src : null,
+        creatorId: userId,
+        creatorName: getArtistName(),
         referenceJpeg
       };
+    }
+
+    // Compact JSON payload the JPEG comment codec embeds — `n`/`id` match the
+    // shape `readCreatorInfo` expects.
+    function buildCreatorCommentPayload() {
+      return JSON.stringify({ n: getArtistName(), id: userId });
     }
 
     async function publishCard() {
@@ -1079,14 +1599,17 @@
                   { contentType: 'application/json', upsert: true });
         if (jsonErr) throw jsonErr;
 
-        const previewBlob = await fetch(bundle.referenceJpeg).then(r => r.blob());
+        const creatorPayload = buildCreatorCommentPayload();
+        const rawPreviewBlob = await fetch(bundle.referenceJpeg).then(r => r.blob());
+        const previewBlob = await embedJpegComment(rawPreviewBlob, creatorPayload);
         const { error: previewErr } = await client.storage
           .from(bucket)
           .upload(`front/kartomat-${uuid}.jpeg`, previewBlob,
                   { contentType: 'image/jpeg', upsert: true });
         if (previewErr) throw previewErr;
 
-        const thumbBlob = await fetch(await buildThumbnail(canvas)).then(r => r.blob());
+        const rawThumbBlob = await buildThumbnail(canvas);
+        const thumbBlob = await embedJpegComment(rawThumbBlob, creatorPayload);
         const { error: thumbErr } = await client.storage
           .from(bucket)
           .upload(`front/kartomat-${uuid}.thumb.jpeg`, thumbBlob,
@@ -1119,6 +1642,244 @@
       ];
       const { error } = await client.storage.from(bucket).remove(paths);
       if (error) throw error;
+    }
+
+    async function adminMoveCard(uuid) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      const bucket = _runtimeConfig.bucket;
+      for (const ext of ['json', 'jpeg', 'thumb.jpeg']) {
+        const { error } = await client.storage.from(bucket).move(
+          `front/kartomat-${uuid}.${ext}`,
+          `front-deleted/kartomat-${uuid}.${ext}`
+        );
+        if (error) throw error;
+      }
+    }
+
+    async function adminRestoreCard(uuid) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      const bucket = _runtimeConfig.bucket;
+      for (const ext of ['json', 'jpeg', 'thumb.jpeg']) {
+        const { error } = await client.storage.from(bucket).move(
+          `front-deleted/kartomat-${uuid}.${ext}`,
+          `front/kartomat-${uuid}.${ext}`
+        );
+        if (error) throw error;
+      }
+    }
+
+    async function fetchCardBundle(uuid) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      const { data, error } = await client.storage
+        .from(_runtimeConfig.bucket)
+        .download(`front/kartomat-${uuid}.json`);
+      if (error) throw error;
+      return JSON.parse(await data.text());
+    }
+
+    async function adminWriteLockout(creatorId) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      let list = [];
+      try {
+        const fetched = await fetchLockoutList();
+        if (Array.isArray(fetched)) list = fetched;
+      } catch (_) {}
+      if (!list.some(e => e.id === creatorId)) {
+        list.push({ id: creatorId, since: new Date().toISOString() });
+      }
+      const blob = new Blob([JSON.stringify(list)], { type: 'application/json' });
+      const { error } = await client.storage
+        .from('admin')
+        .upload('lockout.json', blob, { contentType: 'application/json', upsert: true });
+      if (error) throw error;
+    }
+
+    async function adminRemoveLockout(creatorId) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      let list = [];
+      try {
+        const fetched = await fetchLockoutList();
+        if (Array.isArray(fetched)) list = fetched;
+      } catch (_) {}
+      list = list.filter(e => e.id !== creatorId);
+      const blob = new Blob([JSON.stringify(list)], { type: 'application/json' });
+      const { error } = await client.storage
+        .from('admin')
+        .upload('lockout.json', blob, { contentType: 'application/json', upsert: true });
+      if (error) throw error;
+    }
+
+    async function fetchDeletedCardBundle(uuid) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      const { data, error } = await client.storage
+        .from(_runtimeConfig.bucket)
+        .download(`front-deleted/kartomat-${uuid}.json`);
+      if (error) throw error;
+      return JSON.parse(await data.text());
+    }
+
+    // ── Lockout check & publish banners ──
+
+    async function fetchLockoutList() {
+      const url = _runtimeConfig.url + '/storage/v1/object/public/admin/lockout.json?t=' + Date.now();
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }
+
+    function resetPublishBanner() {
+      const el = document.getElementById('publishBanner');
+      if (!el) return;
+      el.setAttribute('hidden', '');
+      el.className = 'publish-banner';
+    }
+
+    function showPublishBanner(type, statement) {
+      const bannerEl   = document.getElementById('publishBanner');
+      const titleEl    = document.getElementById('publishBannerTitle');
+      const bodyEl     = document.getElementById('publishBannerBody');
+      const actionsEl  = document.getElementById('publishBannerActions');
+      bannerEl.className = 'publish-banner';
+      actionsEl.innerHTML = '';
+
+      if (type === 'publishDisabled') {
+        // Dead-end variant: same red stripe as the lockout banner, but no
+        // confirm action — there is nothing to push through, only the
+        // admin's statement to read.
+        bannerEl.classList.add('locked');
+        titleEl.textContent = 'Veröffentlichen nicht möglich.';
+        bodyEl.textContent  = statement;
+      } else if (type === 'policy') {
+        const lines = config.policy.split('\n');
+        titleEl.textContent = lines[0];
+        bodyEl.textContent  = lines.slice(1).join('\n') +
+          '\nDein Künstlername wird öffentlich unter deiner Karte angezeigt.';
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className   = 'btn-action btn-action-primary';
+        confirmBtn.style.flex  = '1';
+        confirmBtn.textContent = 'Bestätigen';
+        confirmBtn.addEventListener('click', () => { resetPublishBanner(); publishCard(); });
+
+        const dismissBtn = document.createElement('button');
+        dismissBtn.className   = 'btn-action';
+        dismissBtn.textContent = 'Doch nicht';
+        dismissBtn.addEventListener('click', () => { resetPublishBanner(); updatePublishBtn(); });
+
+        actionsEl.appendChild(confirmBtn);
+        actionsEl.appendChild(dismissBtn);
+      } else if (type === 'locked') {
+        bannerEl.classList.add('locked');
+        titleEl.textContent = 'Du bist gesperrt.';
+        bodyEl.textContent  = 'Du kannst keine Karten mehr veröffentlichen, weil du gegen die Veröffentlichungsrichtlinie verstoßen hast.';
+      } else if (type === 'noconn') {
+        bannerEl.classList.add('noconn');
+        titleEl.textContent = 'Keine Verbindung.';
+        bodyEl.textContent  = 'Das hat leider nicht geklappt. Bitte versuche es noch einmal.';
+
+        const retryBtn = document.createElement('button');
+        retryBtn.className   = 'btn-action';
+        retryBtn.textContent = 'Erneut versuchen';
+        retryBtn.addEventListener('click', () => { resetPublishBanner(); runPublishCheck(); });
+        actionsEl.appendChild(retryBtn);
+      } else if (type === 'foreignPublish' || type === 'foreignSave') {
+        bannerEl.classList.add('foreign');
+        const fromName = _collectionDisplayName(state.cardBucket);
+        const toName   = _collectionDisplayName(_runtimeConfig.bucket);
+        const verb     = type === 'foreignPublish' ? 'Veröffentlichen' : 'Speichern';
+        titleEl.textContent = 'Andere Sammlung.';
+        bodyEl.textContent =
+          `Diese Karte gehört zu „${fromName}“, du bist gerade in „${toName}“.\n` +
+          `Beim ${verb} wird eine neue Karte in „${toName}“ angelegt. Die Karte in „${fromName}“ bleibt erhalten.`;
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className   = 'btn-action btn-action-primary';
+        confirmBtn.style.flex  = '1';
+        confirmBtn.textContent = verb;
+        confirmBtn.addEventListener('click', () => {
+          resetPublishBanner();
+          if (type === 'foreignPublish') runNameGate();
+          else saveCard();
+        });
+
+        const dismissBtn = document.createElement('button');
+        dismissBtn.className   = 'btn-action';
+        dismissBtn.textContent = 'Doch nicht';
+        dismissBtn.addEventListener('click', () => { resetPublishBanner(); updatePublishBtn(); });
+
+        actionsEl.appendChild(confirmBtn);
+        actionsEl.appendChild(dismissBtn);
+      }
+
+      bannerEl.removeAttribute('hidden');
+    }
+
+    // ── Publish gate chain ──
+    // Confirming a gate advances to the next; cancelling anywhere leaves the
+    // editor with nothing published and no upload started. One press of
+    // Veröffentlichen carries the user through the whole chain.
+
+    function startPublishFlow() {
+      // Instant local refusal, ahead of every other gate: a hard block must
+      // never arrive after the user has confirmed a collection and typed a
+      // name. Runs before any typing and before any network request.
+      if (config.disable_publish && !_adminMode) {
+        showPublishBanner('publishDisabled', config.disable_publish_statement);
+        return;
+      }
+      runForeignGuard();
+    }
+
+    function runForeignGuard() {
+      const isForeign = state.cardBucket !== null && state.cardBucket !== _runtimeConfig.bucket;
+      if (isForeign) {
+        showPublishBanner('foreignPublish');
+        return;
+      }
+      runNameGate();
+    }
+
+    function runNameGate() {
+      if (getArtistName()) {
+        runPublishCheck();
+        return;
+      }
+      openKuenstlernameSheet({ blocking: true, onSaved: runPublishCheck });
+    }
+
+    async function runPublishCheck() {
+      const btn = document.getElementById('publishBtn');
+      if (!btn) return;
+      btn.disabled = true;
+      btn.classList.remove('btn-action-primary');
+      btn.innerHTML = '<span class="btn-spinner"></span>Prüfen…';
+
+      let lockoutList, flags;
+      try {
+        // Run alongside the lockout fetch rather than after it, so the fresh
+        // flag re-verify adds no extra round-trip. fetchFreshCollectionFlags()
+        // never rejects — it falls back to the startup-loaded config on any
+        // failure — so only the lockout fetch can fail this Promise.all.
+        [lockoutList, flags] = await Promise.all([fetchLockoutList(), fetchFreshCollectionFlags()]);
+      } catch (e) {
+        btn.textContent = 'Veröffentlichen';
+        showPublishBanner('noconn');
+        return;
+      }
+
+      btn.textContent = 'Veröffentlichen';
+      if (flags.disable_publish && !_adminMode) {
+        showPublishBanner('publishDisabled', flags.disable_publish_statement);
+        return;
+      }
+      const isLocked = Array.isArray(lockoutList) && lockoutList.some(entry => entry.id === userId);
+      showPublishBanner(isLocked ? 'locked' : 'policy');
     }
 
     function updatePublishBtn() {
@@ -1191,7 +1952,7 @@
           state.desc = '';
           state.photo = dataURL;
           state.currentId = null;
-          state.cardEvent = null;
+          state.cardBucket = null;
           state.publishedAt = null;
           state.publishedFingerprint = null;
           zoomSlider.value = 1;
@@ -1627,6 +2388,20 @@
 
     // ── Save / Download ──
 
+    function blobToDataURL(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    // Quality dropped from the previous 0.82 to target ~60% of the prior
+    // thumbnail bytes at the same dimensions. Produces a blob (not a data
+    // URL) so publishCard can splice a JPEG comment into the bytes; the
+    // locally-stored thumbnail carries no payload — it is always the user's
+    // own card.
     async function buildThumbnail(fullCanvas) {
       const cropped = cropToTrim(fullCanvas);
       const thumbW = 200;
@@ -1635,23 +2410,23 @@
       thumb.width  = thumbW;
       thumb.height = thumbH;
       thumb.getContext('2d').drawImage(cropped, 0, 0, thumbW, thumbH);
-      return thumb.toDataURL('image/jpeg', 0.82);
+      return new Promise(resolve => thumb.toBlob(resolve, 'image/jpeg', 0.5));
     }
 
     async function persistCard(fullCanvas) {
-      const isForeign = state.cardEvent !== null && state.cardEvent !== config.event;
+      const isForeign = state.cardBucket !== null && state.cardBucket !== _runtimeConfig.bucket;
       if (isForeign) {
         state.currentId = crypto.randomUUID();
-        state.cardEvent = config.event;
+        state.cardBucket = _runtimeConfig.bucket;
         state.publishedAt = null;
         state.publishedFingerprint = null;
       } else if (!state.currentId) {
         state.currentId = crypto.randomUUID();
       }
-      const thumbnail = await buildThumbnail(fullCanvas);
+      const thumbnail = await blobToDataURL(await buildThumbnail(fullCanvas));
       await cardStore.put({
         id:          state.currentId,
-        event:       config.event,
+        bucket:      _runtimeConfig.bucket,
         title:       state.title,
         desc:        state.desc,
         photo:       state.photo,
@@ -1687,14 +2462,21 @@
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    function renderKuenstlernameBar() {
+      const name = getArtistName();
+      document.getElementById('kuenstlernameBarText').textContent = name || 'Künstlername festlegen';
+    }
+
     async function renderHomeList() {
+      renderKuenstlernameBar();
+      if (_adminMode) return;
       const homeEl = document.getElementById('home');
       const listEl = document.getElementById('cardList');
       let cards;
       try { cards = await cardStore.list(); } catch { cards = []; }
       cards.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-      const ownCards = cards.filter(c => !c.event || c.event === config.event);
-      const foreignCards = cards.filter(c => c.event && c.event !== config.event);
+      const ownCards = cards.filter(c => c.bucket === _runtimeConfig?.bucket);
+      const foreignCards = cards.filter(c => c.bucket !== _runtimeConfig?.bucket);
       const sortedCards = [...ownCards, ...foreignCards];
 
       if (!cards.length) {
@@ -1705,10 +2487,11 @@
 
       homeEl.classList.add('has-list');
       listEl.innerHTML = sortedCards.map(c => {
-        const isForeign = c.event && c.event !== config.event;
+        const isForeign = c.bucket !== _runtimeConfig?.bucket;
         let badge;
         if (isForeign) {
-          badge = `<span class="badge-foreign">${escapeHtml(c.event)}</span>`;
+          const label = _collectionDisplayName(c.bucket);
+          badge = `<span class="badge-foreign">${escapeHtml(label)}</span>`;
         } else {
           badge = '<span class="badge-draft">Entwurf</span>';
           if (c.publishedFingerprint) {
@@ -1782,7 +2565,7 @@
       state.offsetYFrac = record.offsetYFrac ?? null;
       state.publishedAt          = record.publishedAt          ?? null;
       state.publishedFingerprint = record.publishedFingerprint ?? null;
-      state.cardEvent            = record.event                ?? null;
+      state.cardBucket           = record.bucket               ?? null;
 
       if (previewImgEl) { previewImgEl.remove(); previewImgEl = null; }
 
@@ -1893,6 +2676,15 @@
     let _galleryObserver = null;
     let _cardViewObjectUrl = null;
     let _cardViewUuid = null;
+    let _cardViewCreatorId = null;
+    let _deletePanelUuid = null;
+    let _deletePanelCreatorId = null;
+    let _deletedGalleryObjectUrls = [];
+    let _deletedGalleryObserver = null;
+    let _deletedCardViewObjectUrl = null;
+    let _deletedCardViewUuid = null;
+    let _deletedCardViewCreatorId = null;
+    let _deletedCardViewIsLocked = false;
 
     function revokeGalleryUrls() {
       if (_galleryObserver) { _galleryObserver.disconnect(); _galleryObserver = null; }
@@ -1903,9 +2695,28 @@
     function revokeCardViewUrl() {
       if (_cardViewObjectUrl) { URL.revokeObjectURL(_cardViewObjectUrl); _cardViewObjectUrl = null; }
       _cardViewUuid = null;
+      _cardViewCreatorId = null;
+      _deletePanelUuid = null;
+      _deletePanelCreatorId = null;
+      document.getElementById('deletePanel').setAttribute('hidden', '');
+      if (_adminMode) document.getElementById('cardViewDeleteBtn').style.display = '';
+    }
+
+    function revokeDeletedGalleryUrls() {
+      if (_deletedGalleryObserver) { _deletedGalleryObserver.disconnect(); _deletedGalleryObserver = null; }
+      _deletedGalleryObjectUrls.forEach(u => URL.revokeObjectURL(u));
+      _deletedGalleryObjectUrls = [];
+    }
+
+    function revokeDeletedCardViewUrl() {
+      if (_deletedCardViewObjectUrl) { URL.revokeObjectURL(_deletedCardViewObjectUrl); _deletedCardViewObjectUrl = null; }
+      _deletedCardViewUuid = null;
+      _deletedCardViewCreatorId = null;
+      _deletedCardViewIsLocked = false;
     }
 
     async function loadGallery() {
+      _galleryLoaded = false;
       const stateEl = document.getElementById('galleryState');
       const gridEl  = document.getElementById('galleryGrid');
       stateEl.textContent = 'Wird geladen …';
@@ -1935,13 +2746,16 @@
           if (!entry.isIntersecting) return;
           const img = entry.target._galleryImg;
           if (!img || img.src) return;
+          const caption = entry.target._galleryCaption;
           const key = entry.target._galleryKey;
           observer.unobserve(entry.target);
-          client.storage.from(_runtimeConfig.bucket).download(key).then(({ data, error }) => {
+          client.storage.from(_runtimeConfig.bucket).download(key).then(async ({ data, error }) => {
             if (error || !data) return;
             const url = URL.createObjectURL(data);
             _galleryObjectUrls.push(url);
             img.src = url;
+            const info = await readCreatorInfo(data).catch(() => null);
+            caption.textContent = (info && info.creatorName) || 'Unbekannt';
           }).catch(() => {});
         });
       }, { rootMargin: '300px' });
@@ -1950,28 +2764,39 @@
 
       for (const entry of thumbEntries) {
         const uuid = entry.name.match(/^kartomat-(.+)\.thumb\.jpeg$/)?.[1];
+        const cell = document.createElement('div');
+        cell.className = 'gallery-cell';
         const tile = document.createElement('div');
         tile.className = 'gallery-tile';
         const img = document.createElement('img');
         img.alt = '';
-        tile._galleryImg = img;
-        tile._galleryKey = 'front/' + entry.name;
-        if (uuid) {
-          tile.style.cursor = 'pointer';
-          tile.addEventListener('click', () => {
+        const caption = document.createElement('div');
+        caption.className = 'gallery-caption';
+        cell._galleryImg = img;
+        cell._galleryCaption = caption;
+        cell._galleryKey = 'front/' + entry.name;
+        if (uuid && !_galleryFestivalMode) {
+          cell.style.cursor = 'pointer';
+          cell.addEventListener('click', () => {
             showScreen('cardView');
             loadCardView(uuid);
           });
         }
         tile.appendChild(img);
-        gridEl.appendChild(tile);
-        observer.observe(tile);
+        cell.appendChild(tile);
+        cell.appendChild(caption);
+        gridEl.appendChild(cell);
+        observer.observe(cell);
       }
+      _galleryLoaded = true;
     }
 
     async function loadCardView(uuid) {
       const img = document.getElementById('cardViewImg');
+      const caption = document.getElementById('cardViewCaption');
       img.src = '';
+      caption.textContent = '';
+      _cardViewCreatorId = null;
       const client = getSupabaseClient();
       if (!client) return;
       const key = 'front/kartomat-' + uuid + '.jpeg';
@@ -1980,6 +2805,136 @@
       _cardViewObjectUrl = URL.createObjectURL(data);
       _cardViewUuid = uuid;
       img.src = _cardViewObjectUrl;
+      const info = await readCreatorInfo(data).catch(() => null);
+      caption.textContent = (info && info.creatorName) || 'Unbekannt';
+      _cardViewCreatorId = (info && info.creatorId) || null;
+    }
+
+    async function loadDeletedGallery() {
+      _deletedGalleryLoaded = false;
+      const stateEl = document.getElementById('deletedGalleryState');
+      const gridEl  = document.getElementById('deletedGalleryGrid');
+      stateEl.textContent = 'Wird geladen …';
+      gridEl.innerHTML = '';
+
+      const client = getSupabaseClient();
+      if (!client) { stateEl.textContent = 'Galerie nicht verfügbar'; return; }
+
+      let thumbEntries;
+      try {
+        const { data, error } = await client.storage
+          .from(_runtimeConfig.bucket)
+          .list('front-deleted', { limit: 200, sortBy: { column: 'created_at', order: 'desc' } });
+        if (error) throw error;
+        thumbEntries = (data || []).filter(f => f.name.endsWith('.thumb.jpeg'));
+      } catch {
+        stateEl.textContent = 'Galerie nicht verfügbar';
+        return;
+      }
+
+      if (!thumbEntries.length) { stateEl.textContent = 'Keine gelöschten Karten'; return; }
+
+      stateEl.textContent = '';
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const img = entry.target._galleryImg;
+          if (!img || img.src) return;
+          const caption = entry.target._galleryCaption;
+          const key = entry.target._galleryKey;
+          observer.unobserve(entry.target);
+          client.storage.from(_runtimeConfig.bucket).download(key).then(async ({ data, error }) => {
+            if (error || !data) return;
+            const url = URL.createObjectURL(data);
+            _deletedGalleryObjectUrls.push(url);
+            img.src = url;
+            const info = await readCreatorInfo(data).catch(() => null);
+            caption.textContent = (info && info.creatorName) || 'Unbekannt';
+          }).catch(() => {});
+        });
+      }, { rootMargin: '300px' });
+
+      _deletedGalleryObserver = observer;
+
+      for (const entry of thumbEntries) {
+        const uuid = entry.name.match(/^kartomat-(.+)\.thumb\.jpeg$/)?.[1];
+        const cell = document.createElement('div');
+        cell.className = 'gallery-cell';
+        const tile = document.createElement('div');
+        tile.className = 'gallery-tile';
+        const img = document.createElement('img');
+        img.alt = '';
+        const caption = document.createElement('div');
+        caption.className = 'gallery-caption';
+        cell._galleryImg = img;
+        cell._galleryCaption = caption;
+        cell._galleryKey = 'front-deleted/' + entry.name;
+        if (uuid) {
+          cell.style.cursor = 'pointer';
+          cell.addEventListener('click', () => {
+            showScreen('deletedCardView');
+            loadDeletedCardView(uuid);
+          });
+        }
+        tile.appendChild(img);
+        cell.appendChild(tile);
+        cell.appendChild(caption);
+        gridEl.appendChild(cell);
+        observer.observe(cell);
+      }
+      _deletedGalleryLoaded = true;
+    }
+
+    async function loadDeletedCardView(uuid) {
+      _deletedCardViewUuid = uuid;
+      _deletedCardViewCreatorId = null;
+      _deletedCardViewIsLocked = false;
+
+      const img = document.getElementById('deletedCardViewImg');
+      const caption = document.getElementById('deletedCardViewCaption');
+      img.src = '';
+      caption.textContent = '';
+      const unlockBtn = document.getElementById('deletedCardViewUnlockBtn');
+      const restoreBtn = document.getElementById('deletedCardViewRestoreBtn');
+      unlockBtn.textContent = 'Ersteller entsperren';
+      unlockBtn.disabled = true;
+      restoreBtn.disabled = false;
+
+      const client = getSupabaseClient();
+      if (!client) return;
+
+      const key = 'front-deleted/kartomat-' + uuid + '.jpeg';
+      const { data, error } = await client.storage.from(_runtimeConfig.bucket).download(key);
+      if (error || !data) return;
+      _deletedCardViewObjectUrl = URL.createObjectURL(data);
+      img.src = _deletedCardViewObjectUrl;
+
+      const info = await readCreatorInfo(data).catch(() => null);
+      caption.textContent = (info && info.creatorName) || 'Unbekannt';
+      let creatorId = (info && info.creatorId) || null;
+
+      try {
+        const [bundle, lockout] = await Promise.all([
+          creatorId ? Promise.resolve(null) : fetchDeletedCardBundle(uuid).catch(() => null),
+          fetchLockoutList().catch(() => [])
+        ]);
+        if (!creatorId && bundle && bundle.creatorId) creatorId = bundle.creatorId;
+        const lockoutList = Array.isArray(lockout) ? lockout : [];
+        _deletedCardViewCreatorId = creatorId;
+
+        if (!creatorId) {
+          unlockBtn.textContent = 'Ersteller unbekannt';
+          unlockBtn.disabled = true;
+        } else if (lockoutList.some(e => e.id === creatorId)) {
+          unlockBtn.textContent = 'Ersteller entsperren';
+          unlockBtn.disabled = false;
+          _deletedCardViewIsLocked = true;
+        } else {
+          unlockBtn.textContent = 'Nicht gesperrt';
+          unlockBtn.disabled = true;
+        }
+      } catch (_) {}
     }
 
     // ── Init ──
@@ -1989,11 +2944,155 @@
       twoTapControl.tap(document.getElementById('backBtn'), 'Änderungen verwerfen?', () => showScreen('home'));
     });
 
-    document.getElementById('galleryBtn').addEventListener('click', () => showScreen('gallery'));
+    document.getElementById('galleryBtn').addEventListener('click', () => {
+      if (_adminMode) { showScreen('gallery'); return; }
+      if (config.disable_gallery) {
+        openGalleryDisabledSheet(config.disable_gallery_statement);
+        return;
+      }
+      _galleryFestivalMode = config.festival_mode;
+      showScreen('gallery');
+    });
     document.getElementById('galleryBackBtn').addEventListener('click', () => showScreen('home'));
-    document.getElementById('cardViewBackBtn').addEventListener('click', () => showScreen('gallery'));
+    document.getElementById('cardViewImg').addEventListener('click', () => showScreen('gallery'));
+    document.querySelector('#cardView .card-view-body').addEventListener('click', e => { if (e.target === e.currentTarget) showScreen('gallery'); });
+    document.getElementById('deletedGalleryBtn').addEventListener('click', () => showScreen('deletedGallery'));
+    document.getElementById('deletedGalleryBackBtn').addEventListener('click', () => showScreen('home'));
+    document.getElementById('deletedCardViewImg').addEventListener('click', () => showScreen('deletedGallery'));
+    document.querySelector('#deletedCardView .card-view-body').addEventListener('click', e => { if (e.target === e.currentTarget) showScreen('deletedGallery'); });
+
+    document.getElementById('deletedCardViewUnlockBtn').addEventListener('click', () => {
+      const creatorId = _deletedCardViewCreatorId;
+      if (!creatorId || !_deletedCardViewIsLocked) return;
+      const btn = document.getElementById('deletedCardViewUnlockBtn');
+      twoTapControl.tap(btn, 'Wirklich entsperren?', async () => {
+        btn.disabled = true;
+        try {
+          await adminRemoveLockout(creatorId);
+          _deletedCardViewIsLocked = false;
+          btn.textContent = 'Nicht gesperrt';
+          btn.disabled = true;
+        } catch (err) {
+          alert('Fehler beim Entsperren: ' + (err.message || err));
+          btn.disabled = false;
+        }
+      });
+    });
+
+    document.getElementById('deletedCardViewRestoreBtn').addEventListener('click', () => {
+      const uuid = _deletedCardViewUuid;
+      if (!uuid) return;
+      const restoreBtn = document.getElementById('deletedCardViewRestoreBtn');
+      const unlockBtn = document.getElementById('deletedCardViewUnlockBtn');
+      twoTapControl.tap(restoreBtn, 'Wirklich wiederherstellen?', async () => {
+        restoreBtn.disabled = true;
+        unlockBtn.disabled = true;
+        try {
+          if (_deletedCardViewIsLocked && _deletedCardViewCreatorId) {
+            await adminRemoveLockout(_deletedCardViewCreatorId);
+          }
+          await adminRestoreCard(uuid);
+          _galleryLoaded = false;
+          _deletedGalleryLoaded = false;
+          showScreen('deletedGallery');
+        } catch (err) {
+          alert('Fehler beim Wiederherstellen: ' + (err.message || err));
+          restoreBtn.disabled = false;
+          unlockBtn.disabled = !(_deletedCardViewCreatorId && _deletedCardViewIsLocked);
+        }
+      });
+    });
     document.getElementById('cardViewDownloadBtn').addEventListener('click', () => {
       if (_cardViewObjectUrl && _cardViewUuid) triggerDownload(_cardViewObjectUrl, 'kartomat-' + _cardViewUuid + '.jpeg');
+    });
+    async function showDeletePanel(uuid) {
+      _deletePanelUuid = uuid;
+      _deletePanelCreatorId = null;
+      const lockBtn = document.getElementById('deleteLockBtn');
+      const onlyBtn = document.getElementById('deleteOnlyBtn');
+      lockBtn.textContent = 'Löschen & sperren';
+      lockBtn.disabled = true;
+      onlyBtn.disabled = false;
+      document.getElementById('cardViewDeleteBtn').style.display = 'none';
+      document.getElementById('deletePanel').removeAttribute('hidden');
+
+      let creatorId = _cardViewCreatorId || null;
+      let lockoutList = [];
+      try {
+        const [bundle, lockout] = await Promise.all([
+          creatorId ? Promise.resolve(null) : fetchCardBundle(uuid).catch(() => null),
+          fetchLockoutList().catch(() => [])
+        ]);
+        if (!creatorId && bundle && bundle.creatorId) creatorId = bundle.creatorId;
+        lockoutList = Array.isArray(lockout) ? lockout : [];
+      } catch (_) {}
+
+      if (!creatorId) {
+        lockBtn.textContent = 'Ersteller unbekannt';
+        lockBtn.disabled = true;
+      } else if (lockoutList.some(e => e.id === creatorId)) {
+        lockBtn.textContent = 'Schon gesperrt';
+        lockBtn.disabled = true;
+      } else {
+        lockBtn.textContent = 'Löschen & sperren';
+        lockBtn.disabled = false;
+        _deletePanelCreatorId = creatorId;
+      }
+    }
+
+    document.getElementById('deleteLockBtn').addEventListener('click', () => {
+      const uuid = _deletePanelUuid;
+      const creatorId = _deletePanelCreatorId;
+      if (!uuid || !creatorId) return;
+      const lockBtn = document.getElementById('deleteLockBtn');
+      const onlyBtn = document.getElementById('deleteOnlyBtn');
+      twoTapControl.tap(lockBtn, 'Wirklich sperren?', async () => {
+        lockBtn.disabled = true;
+        onlyBtn.disabled = true;
+        try {
+          await adminMoveCard(uuid);
+          await adminWriteLockout(creatorId);
+          _galleryLoaded = false;
+          showScreen('gallery');
+        } catch (err) {
+          alert('Fehler beim Löschen: ' + (err.message || err));
+          lockBtn.disabled = false;
+          onlyBtn.disabled = false;
+        }
+      });
+    });
+
+    document.getElementById('deleteOnlyBtn').addEventListener('click', () => {
+      const uuid = _deletePanelUuid;
+      if (!uuid) return;
+      const lockBtn = document.getElementById('deleteLockBtn');
+      const onlyBtn = document.getElementById('deleteOnlyBtn');
+      twoTapControl.tap(onlyBtn, 'Wirklich löschen?', async () => {
+        lockBtn.disabled = true;
+        onlyBtn.disabled = true;
+        try {
+          await adminMoveCard(uuid);
+          _galleryLoaded = false;
+          showScreen('gallery');
+        } catch (err) {
+          alert('Fehler beim Löschen: ' + (err.message || err));
+          lockBtn.disabled = false;
+          onlyBtn.disabled = false;
+        }
+      });
+    });
+
+    document.getElementById('deleteCancelBtn').addEventListener('click', () => {
+      document.getElementById('deletePanel').setAttribute('hidden', '');
+      document.getElementById('cardViewDeleteBtn').style.display = '';
+      _deletePanelUuid = null;
+      _deletePanelCreatorId = null;
+    });
+
+    document.getElementById('cardViewDeleteBtn').addEventListener('click', () => {
+      const uuid = _cardViewUuid;
+      if (!uuid) return;
+      showDeletePanel(uuid);
     });
 
     createBtn.addEventListener('click', openPhotoSource);
@@ -2012,8 +3111,13 @@
       if (e.target === photoChooser) closeChooser();
     });
     document.getElementById('saveBtn').addEventListener('click', () => {
-      const isForeign = state.cardEvent !== null && state.cardEvent !== config.event;
-      const needsConfirm = state.currentId !== null && !isForeign;
+      const isForeign = state.cardBucket !== null && state.cardBucket !== _runtimeConfig.bucket;
+      if (isForeign) {
+        resetPublishBanner();
+        showPublishBanner('foreignSave');
+        return;
+      }
+      const needsConfirm = state.currentId !== null;
       if (needsConfirm) {
         twoTapControl.tap(document.getElementById('saveBtn'), 'Wirklich?', saveCard);
       } else {
@@ -2022,35 +3126,428 @@
     });
     document.getElementById('downloadBtn').addEventListener('click', downloadCard);
     document.getElementById('publishBtn').addEventListener('click', () => {
-      twoTapControl.tap(document.getElementById('publishBtn'), 'Bestätigen', publishCard);
+      resetPublishBanner();
+      startPublishFlow();
+    });
+    document.getElementById('publishBanner').addEventListener('click', (e) => {
+      if (e.target.closest('.publish-banner-actions')) return;
+      resetPublishBanner();
+      updatePublishBtn();
     });
 
     renderHomeList();
 
-    // ── App config (bucket / event / tagline) ──
-    const config = (() => {
-      const DEFAULTS = {
-        bucket:  '3600grad-karten-upload-hummelrummel',
-        event:   'hummelrummel',
-        tagline: 'Erstelle deine eigene Festivalkarte — schön, schnell, auf deinem Handy.'
-      };
-      const params = new URLSearchParams(location.search);
-      const out = {};
-      for (const key of Object.keys(DEFAULTS)) {
-        const param = params.get(key);
-        if (param !== null) {
-          localStorage.setItem('kartomat:' + key, param);
-          out[key] = param;
-        } else {
-          const stored = localStorage.getItem('kartomat:' + key);
-          out[key] = stored !== null ? stored : DEFAULTS[key];
-        }
-      }
-      return out;
-    })();
+    // ── Collection configuration (collection.json) ──
+    let config = null;
 
-    document.getElementById('homeEvent').textContent  = config.event;
-    document.getElementById('homeTagline').textContent = config.tagline;
+    // The two statement fields as actually stored (blank when the field is
+    // absent or whitespace-only), kept separately from the resolved `config`
+    // above so the admin settings sheet can prefill a blank field rather than
+    // the built-in default text — resolveCollectionFlags() only ever exposes
+    // the resolved value, never whether the source field was present.
+    let _rawFlagStatements = { disable_gallery_statement: '', disable_publish_statement: '' };
+
+    function _rawStatementOrBlank(source, key) {
+      const v = source ? source[key] : undefined;
+      return (typeof v === 'string' && v.trim() !== '') ? v : '';
+    }
+
+    const COLLECTION_CONFIG_DEFAULTS = Object.assign({
+      title:       'hummelrummel',
+      description: 'Erstelle deine eigene Sammelkarte\n\nDie besten werden beim nächsten Festival real',
+      name:        'Hummelrummel',
+      policy:      'Seid rücksichtsvoll.\nAndere Personen sehen deine Karte.\nkein Sexismus, kein Rassismus, keine Homophobie.'
+    }, COLLECTION_FLAG_DEFAULTS);
+
+    // ── Known-collections registry ──
+    // Every collection this device has successfully opened, keyed by bucket. Read
+    // synchronously from localStorage (not IndexedDB) because it must be available
+    // during startup config resolution, before anything renders. Doubles as the
+    // offline fallback for collection.json below.
+    const KNOWN_COLLECTIONS_KEY = 'kartomat:knownCollections';
+    const ACTIVE_CONFIG_KEY = 'kartomat_cfg';
+
+    function _loadKnownCollections() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(KNOWN_COLLECTIONS_KEY));
+        return (parsed && typeof parsed === 'object') ? parsed : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function _getKnownCollection(bucket) {
+      return _loadKnownCollections()[bucket] || null;
+    }
+
+    function _collectionDisplayName(bucket) {
+      const known = bucket ? _getKnownCollection(bucket) : null;
+      return (known && known.name) || bucket || 'Unbekannt';
+    }
+
+    function _upsertKnownCollection(bucket, cfg) {
+      const registry = _loadKnownCollections();
+      registry[bucket] = {
+        url:         _runtimeConfig.url,
+        key:         _runtimeConfig.key,
+        title:       cfg.title,
+        description: cfg.description,
+        name:        cfg.name,
+        policy:      cfg.policy,
+        festival_mode:              cfg.festival_mode,
+        disable_gallery:            cfg.disable_gallery,
+        disable_gallery_statement:  cfg.disable_gallery_statement,
+        disable_publish:            cfg.disable_publish,
+        disable_publish_statement:  cfg.disable_publish_statement,
+        lastUsed:    Date.now()
+      };
+      localStorage.setItem(KNOWN_COLLECTIONS_KEY, JSON.stringify(registry));
+    }
+
+    const COLLECTION_TEXT_FIELDS = ['title', 'description', 'name', 'policy'];
+
+    // Writes a patch of the five flag fields to collection.json — the only
+    // route in the app that writes this file. Modelled on adminWriteLockout:
+    // read with the admin key, merge via the pure function, validate, then
+    // upload with upsert. Deliberately paranoid because collection.json is
+    // fatal-on-missing for every user of the collection and there is no
+    // in-app recovery for a bricked one — a failed or unparseable read must
+    // never fall through to uploading a fresh, flags-only document.
+    async function adminWriteCollectionFlags(patch) {
+      const client = getSupabaseClient();
+      if (!client) throw new Error('Cloud nicht verfügbar');
+      const bucket = _runtimeConfig.bucket;
+
+      const { data, error: downloadErr } = await client.storage.from(bucket).download('collection.json');
+      if (downloadErr) throw downloadErr;
+
+      let existing;
+      try {
+        existing = JSON.parse(await data.text());
+      } catch (e) {
+        throw new Error('collection.json ist nicht lesbar: ' + e.message);
+      }
+
+      const merged = mergeCollectionFlags(existing, patch);
+      if (merged === null) throw new Error('Konfiguration konnte nicht zusammengeführt werden.');
+      if (!COLLECTION_TEXT_FIELDS.every(f => merged[f] === existing[f])) {
+        throw new Error('Zusammengeführte Konfiguration hat die Textfelder verändert.');
+      }
+
+      const blob = new Blob([JSON.stringify(merged)], { type: 'application/json' });
+      const { error: uploadErr } = await client.storage
+        .from(bucket)
+        .upload('collection.json', blob, { contentType: 'application/json', upsert: true, cacheControl: '0' });
+      if (uploadErr) throw uploadErr;
+
+      config = Object.assign({}, config, resolveCollectionFlags(merged));
+      _upsertKnownCollection(bucket, config);
+    }
+
+    // ── Admin state module ──
+    // Owns admin persistence and lifecycle behind a small interface: is admin
+    // available, is admin active, enter, leave. Both entries are global and
+    // collection-independent, stored alongside the active-config and known-
+    // collections entries above — never nested inside a collection's registry
+    // record — so one stored key grants admin across every collection. Mode
+    // changes always take effect via a full reload (the same mechanism
+    // collection switching already uses), so these functions only persist
+    // state; the reload itself is the caller's job. There is exactly one code
+    // path that produces the admin interface (applyAdminMode, below, run at
+    // startup) and no inverse of it is written here.
+    const ADMIN_KEY_KEY = 'kartomat:adminKey';
+    const ADMIN_ACTIVE_KEY = 'kartomat:adminActive';
+
+    const _adminState = {
+      isAvailable() { return !!localStorage.getItem(ADMIN_KEY_KEY); },
+      isActive() { return localStorage.getItem(ADMIN_ACTIVE_KEY) === '1'; },
+      key() { return localStorage.getItem(ADMIN_KEY_KEY); },
+      enter(key) {
+        localStorage.setItem(ADMIN_KEY_KEY, key);
+        localStorage.setItem(ADMIN_ACTIVE_KEY, '1');
+      },
+      leave() {
+        localStorage.setItem(ADMIN_ACTIVE_KEY, '0');
+      }
+    };
+
+    // ── Collection title module ──
+    // Single entry point for every collection-title surface: the home title
+    // and every per-screen bar. Given the current config and the known-
+    // collection count, it renders each surface's label and drives its tap
+    // affordance — enabled only once more than one collection is known —
+    // rather than introducing a second code path per surface. Home renders
+    // the long `title`; every bar renders the short `name`. A bar marked
+    // data-always-disabled (the editor's) stays non-tappable regardless of
+    // count, so an in-progress card can't be discarded by an accidental tap.
+
+    function _updateCollectionTitle(config, count) {
+      const homeTitle = document.getElementById('homeTitle');
+      document.getElementById('homeTitleText').textContent = config.title;
+      homeTitle.disabled = count <= 1;
+
+      document.querySelectorAll('.collection-bar').forEach(bar => {
+        bar.querySelector('.collection-bar-text').textContent = config.name;
+        if (bar.dataset.alwaysDisabled !== 'true') bar.disabled = count <= 1;
+      });
+    }
+
+    function _renderCollectionSwitcherList() {
+      const registry = _loadKnownCollections();
+      const entries = Object.keys(registry).map(bucket => Object.assign({ bucket }, registry[bucket]));
+      entries.sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0));
+      document.getElementById('collectionSwitcherList').innerHTML = entries.map(e => {
+        const isActive = e.bucket === _runtimeConfig.bucket;
+        return `<button type="button" class="photo-chooser-btn${isActive ? ' switcher-active' : ''}" data-bucket="${escapeHtml(e.bucket)}">${escapeHtml(e.name)}${isActive ? ' ✓' : ''}</button>`;
+      }).join('');
+    }
+
+    function openCollectionSwitcher() {
+      _renderCollectionSwitcherList();
+      document.getElementById('collectionSwitcher').style.display = 'flex';
+    }
+
+    function closeCollectionSwitcher() {
+      document.getElementById('collectionSwitcher').style.display = 'none';
+    }
+
+    function selectCollection(bucket) {
+      const entry = _loadKnownCollections()[bucket];
+      if (!entry) return;
+      localStorage.setItem(ACTIVE_CONFIG_KEY, JSON.stringify({ url: entry.url, key: entry.key, bucket: bucket }));
+      location.reload();
+    }
+
+    document.getElementById('homeTitle').addEventListener('click', openCollectionSwitcher);
+    ['galleryCollectionBar', 'cardViewCollectionBar', 'deletedGalleryCollectionBar', 'deletedCardViewCollectionBar'].forEach(id => {
+      document.getElementById(id).addEventListener('click', openCollectionSwitcher);
+    });
+    document.getElementById('switcherCancelBtn').addEventListener('click', closeCollectionSwitcher);
+    document.getElementById('collectionSwitcherList').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-bucket]');
+      if (btn) selectCollection(btn.dataset.bucket);
+    });
+    document.getElementById('collectionSwitcher').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('collectionSwitcher')) closeCollectionSwitcher();
+    });
+
+    // ── Künstlername sheet ──
+    // Editable mode only here: cancel and backdrop-dismiss both available,
+    // cancelling changes nothing. A later blocking mode (used by the publish
+    // gate) suppresses both and takes a continuation callback — opts is
+    // threaded through now so that mode drops in without reshaping this.
+
+    const kuenstlernameSheet     = document.getElementById('kuenstlernameSheet');
+    const kuenstlernameInput     = document.getElementById('kuenstlernameInput');
+    const kuenstlernameSaveBtn   = document.getElementById('kuenstlernameSaveBtn');
+    const kuenstlernameCancelBtn = document.getElementById('kuenstlernameCancelBtn');
+    let _kuenstlernameOnSaved = null;
+
+    function cleanArtistNameInput(raw) {
+      return String(raw || '').replace(/[\r\n]/g, '').trim().slice(0, 20);
+    }
+
+    function updateKuenstlernameSaveBtn() {
+      kuenstlernameSaveBtn.disabled = !cleanArtistNameInput(kuenstlernameInput.value);
+    }
+
+    function openKuenstlernameSheet(opts) {
+      opts = opts || {};
+      const blocking = !!opts.blocking;
+      kuenstlernameInput.value = getArtistName() || '';
+      updateKuenstlernameSaveBtn();
+      kuenstlernameSheet.dataset.blocking = blocking ? '1' : '0';
+      kuenstlernameCancelBtn.style.display = blocking ? 'none' : '';
+      _kuenstlernameOnSaved = opts.onSaved || null;
+      kuenstlernameSheet.style.display = 'flex';
+      kuenstlernameInput.focus();
+    }
+
+    function closeKuenstlernameSheet() {
+      kuenstlernameSheet.style.display = 'none';
+    }
+
+    kuenstlernameInput.addEventListener('input', () => {
+      const stripped = kuenstlernameInput.value.replace(/[\r\n]/g, '');
+      if (stripped !== kuenstlernameInput.value) kuenstlernameInput.value = stripped;
+      updateKuenstlernameSaveBtn();
+    });
+
+    kuenstlernameSaveBtn.addEventListener('click', () => {
+      const cleaned = cleanArtistNameInput(kuenstlernameInput.value);
+      if (!cleaned) return;
+      setArtistName(cleaned);
+      closeKuenstlernameSheet();
+      renderKuenstlernameBar();
+      const onSaved = _kuenstlernameOnSaved;
+      _kuenstlernameOnSaved = null;
+      if (onSaved) onSaved();
+    });
+
+    kuenstlernameCancelBtn.addEventListener('click', () => {
+      if (kuenstlernameSheet.dataset.blocking === '1') return;
+      closeKuenstlernameSheet();
+    });
+    kuenstlernameSheet.addEventListener('click', (e) => {
+      if (e.target !== kuenstlernameSheet) return;
+      if (kuenstlernameSheet.dataset.blocking === '1') return;
+      closeKuenstlernameSheet();
+    });
+
+    document.getElementById('kuenstlernameBar').addEventListener('click', () => openKuenstlernameSheet());
+
+    // ── Gallery-disabled statement sheet ──
+    // Opened by the Galerie handler instead of navigating, when disable_gallery
+    // is on for a non-admin — the button stays visible and tappable because it
+    // is the only delivery route for the statement.
+
+    const galleryDisabledSheet      = document.getElementById('galleryDisabledSheet');
+    const galleryDisabledText       = document.getElementById('galleryDisabledText');
+    const galleryDisabledDismissBtn = document.getElementById('galleryDisabledDismissBtn');
+
+    function openGalleryDisabledSheet(statement) {
+      galleryDisabledText.textContent = statement;
+      galleryDisabledSheet.style.display = 'flex';
+    }
+
+    function closeGalleryDisabledSheet() {
+      galleryDisabledSheet.style.display = 'none';
+    }
+
+    galleryDisabledDismissBtn.addEventListener('click', closeGalleryDisabledSheet);
+    galleryDisabledSheet.addEventListener('click', (e) => {
+      if (e.target === galleryDisabledSheet) closeGalleryDisabledSheet();
+    });
+
+    // ── Admin settings sheet ──
+    // Opened only from the admin-only home button (applyAdminMode reveals it,
+    // the same mechanism as deletedGalleryBtn). Toggles are two-state buttons
+    // built from the existing action-button/armed-state styling rather than a
+    // new switch control; the statements are the app's first textareas. One
+    // save writes all five values in a single request through issue 004's
+    // adminWriteCollectionFlags — on success the sheet closes (that routine
+    // already updates the live `config`); on failure a visible error is shown
+    // here and the sheet stays open with nothing lost.
+
+    const adminSettingsSheet = document.getElementById('adminSettingsSheet');
+    const settingsToggleBtns = Array.from(document.querySelectorAll('#adminSettingsSheet .settings-toggle'));
+    const settingsDisableGalleryStatement = document.getElementById('settingsDisableGalleryStatement');
+    const settingsDisablePublishStatement = document.getElementById('settingsDisablePublishStatement');
+    const settingsError   = document.getElementById('settingsError');
+    const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+    const settingsCancelBtn = document.getElementById('settingsCancelBtn');
+
+    const SETTINGS_TOGGLE_LABELS = {
+      festival_mode:    'Festival-Modus',
+      disable_gallery:  'Galerie sperren',
+      disable_publish:  'Veröffentlichen sperren'
+    };
+
+    let _settingsState = null;
+
+    function _renderSettingsToggle(btn) {
+      const flag = btn.dataset.flag;
+      const on = !!_settingsState[flag];
+      btn.classList.toggle('armed', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.textContent = (on ? '✓ ' : '') + SETTINGS_TOGGLE_LABELS[flag];
+    }
+
+    function openAdminSettingsSheet() {
+      settingsError.style.display = 'none';
+      settingsError.textContent = '';
+      _settingsState = {
+        festival_mode:   !!config.festival_mode,
+        disable_gallery: !!config.disable_gallery,
+        disable_publish: !!config.disable_publish
+      };
+      settingsToggleBtns.forEach(_renderSettingsToggle);
+      settingsDisableGalleryStatement.value = _rawFlagStatements.disable_gallery_statement;
+      settingsDisablePublishStatement.value = _rawFlagStatements.disable_publish_statement;
+      adminSettingsSheet.style.display = 'flex';
+    }
+
+    function closeAdminSettingsSheet() {
+      adminSettingsSheet.style.display = 'none';
+    }
+
+    settingsToggleBtns.forEach(btn => btn.addEventListener('click', () => {
+      const flag = btn.dataset.flag;
+      _settingsState[flag] = !_settingsState[flag];
+      _renderSettingsToggle(btn);
+    }));
+
+    settingsSaveBtn.addEventListener('click', async () => {
+      // A blank statement is written as absent (an explicit `undefined` patch
+      // value, still `hasOwnProperty`-owned) so the built-in default applies,
+      // rather than persisting the default text into the file.
+      const galleryStatement = settingsDisableGalleryStatement.value;
+      const publishStatement = settingsDisablePublishStatement.value;
+      const patch = {
+        festival_mode:   _settingsState.festival_mode,
+        disable_gallery: _settingsState.disable_gallery,
+        disable_publish: _settingsState.disable_publish,
+        disable_gallery_statement: galleryStatement.trim() === '' ? undefined : galleryStatement,
+        disable_publish_statement: publishStatement.trim() === '' ? undefined : publishStatement
+      };
+      settingsError.style.display = 'none';
+      settingsSaveBtn.disabled = true;
+      settingsCancelBtn.disabled = true;
+      const originalLabel = settingsSaveBtn.textContent;
+      settingsSaveBtn.textContent = 'Speichert…';
+      try {
+        await adminWriteCollectionFlags(patch);
+        _rawFlagStatements = {
+          disable_gallery_statement: typeof patch.disable_gallery_statement === 'string' ? patch.disable_gallery_statement : '',
+          disable_publish_statement: typeof patch.disable_publish_statement === 'string' ? patch.disable_publish_statement : ''
+        };
+        closeAdminSettingsSheet();
+      } catch (e) {
+        settingsError.textContent = 'Speichern fehlgeschlagen: ' + e.message;
+        settingsError.style.display = '';
+      } finally {
+        settingsSaveBtn.disabled = false;
+        settingsCancelBtn.disabled = false;
+        settingsSaveBtn.textContent = originalLabel;
+      }
+    });
+
+    settingsCancelBtn.addEventListener('click', closeAdminSettingsSheet);
+    adminSettingsSheet.addEventListener('click', (e) => {
+      if (e.target === adminSettingsSheet) closeAdminSettingsSheet();
+    });
+    document.getElementById('adminSettingsBtn').addEventListener('click', openAdminSettingsSheet);
+
+    // ── Admin entry gesture ──
+    // Three taps within a short window on the app-name heading. With no
+    // stored admin key this is a complete no-op — no visible response of
+    // any kind — so an ordinary visitor can never discover admin mode
+    // exists. Entry takes effect via the same persist-then-reload mechanism
+    // as everywhere else; applyAdminMode() (run at startup) remains the
+    // only code path that builds the admin interface.
+    let _adminGestureCount = 0;
+    let _adminGestureTimer = null;
+    document.querySelector('.app-name').addEventListener('click', () => {
+      if (!_adminState.isAvailable()) return;
+      clearTimeout(_adminGestureTimer);
+      _adminGestureCount++;
+      if (_adminGestureCount >= 3) {
+        _adminGestureCount = 0;
+        _adminState.enter(_adminState.key());
+        location.reload();
+        return;
+      }
+      _adminGestureTimer = setTimeout(() => { _adminGestureCount = 0; }, 600);
+    });
+
+    // ── Admin logout ──
+    // Clears the active flag but keeps the stored key, then reloads — the
+    // same persist-then-reload mechanism, so the gesture above can get back
+    // in without the original link.
+    document.getElementById('adminLogoutBtn').addEventListener('click', () => {
+      _adminState.leave();
+      location.reload();
+    });
 
     // ── Asset loading ──
 
@@ -2064,6 +3561,11 @@
     function _assetBase() {
       return _runtimeConfig.url + '/storage/v1/object/authenticated/' + _runtimeConfig.bucket + '/assets';
     }
+    // collection.json lives at the bucket root rather than under assets/, so it
+    // falls outside the service worker's cache-first rule and is always network-fresh.
+    function _collectionConfigUrl() {
+      return _runtimeConfig.url + '/storage/v1/object/authenticated/' + _runtimeConfig.bucket + '/collection.json';
+    }
     function _authHeaders(extra) {
       return Object.assign({
         apikey: _runtimeConfig.key,
@@ -2075,15 +3577,54 @@
       const base = _assetBase();
       const bgUrl = base + '/background.jpeg';
       const fontUrl = base + '/Nove.woff2';
-      const [bgRes, fontRes] = await Promise.all([
+      const configUrl = _collectionConfigUrl();
+      // Settled independently (not a single failing Promise.all) so that a rejected
+      // collection.json fetch — the only one of the three not covered by the service
+      // worker's cache-first rule, and therefore the only one that can reject while
+      // offline — can fall back to the registry without losing the background/font.
+      const [bgOutcome, fontOutcome, configOutcome] = await Promise.allSettled([
         fetch(bgUrl, { headers: _authHeaders() }),
-        fetch(fontUrl, { headers: _authHeaders() })
+        fetch(fontUrl, { headers: _authHeaders() }),
+        fetch(configUrl, { headers: _authHeaders(), cache: 'no-store' })
       ]);
+      if (bgOutcome.status === 'rejected') throw bgOutcome.reason;
+      if (fontOutcome.status === 'rejected') throw fontOutcome.reason;
+      const bgRes = bgOutcome.value;
+      const fontRes = fontOutcome.value;
       if (!bgRes.ok) throw new Error('background.jpeg: HTTP ' + bgRes.status);
       if (!fontRes.ok) throw new Error('Nove.woff2: HTTP ' + fontRes.status);
+
+      let collectionJson;
+      let usedStoredConfig = false;
+      if (configOutcome.status === 'fulfilled') {
+        const configRes = configOutcome.value;
+        if (!configRes.ok) throw new Error('collection.json: HTTP ' + configRes.status);
+        collectionJson = await configRes.json();
+      } else {
+        const stored = _getKnownCollection(_runtimeConfig.bucket);
+        if (!stored) throw configOutcome.reason;
+        collectionJson = stored;
+        usedStoredConfig = true;
+      }
+
       _saveEtag(bgUrl, bgRes);
       _saveEtag(fontUrl, fontRes);
       const [bgBlob, fontBlob] = await Promise.all([bgRes.blob(), fontRes.blob()]);
+      config = Object.assign({
+        title:       collectionJson.title       ?? COLLECTION_CONFIG_DEFAULTS.title,
+        description: collectionJson.description ?? COLLECTION_CONFIG_DEFAULTS.description,
+        name:        collectionJson.name        ?? COLLECTION_CONFIG_DEFAULTS.name,
+        policy:      collectionJson.policy      ?? COLLECTION_CONFIG_DEFAULTS.policy
+      }, resolveCollectionFlags(collectionJson));
+      _rawFlagStatements = {
+        disable_gallery_statement: _rawStatementOrBlank(collectionJson, 'disable_gallery_statement'),
+        disable_publish_statement: _rawStatementOrBlank(collectionJson, 'disable_publish_statement')
+      };
+      // Only a live, successful fetch counts as re-opening the collection — a
+      // fallback to the stored copy leaves its entry (and last-used timestamp) as is.
+      if (!usedStoredConfig) _upsertKnownCollection(_runtimeConfig.bucket, config);
+      document.getElementById('homeDescription').textContent = config.description;
+      _updateCollectionTitle(config, Object.keys(_loadKnownCollections()).length);
       const fontBlobUrl = URL.createObjectURL(fontBlob);
       const face = new FontFace('Nove', 'url(' + fontBlobUrl + ')', { weight: '700', style: 'normal' });
       await face.load();
@@ -2093,6 +3634,60 @@
       _bgObjectUrl = URL.createObjectURL(bgBlob);
       bgImg.src = _bgObjectUrl;
       document.getElementById('cardFull').style.backgroundImage = 'url("' + _bgObjectUrl + '")';
+    }
+
+    // Fetches and parses collection.json fresh from the bucket. Returns null
+    // on any offline, HTTP, or parse failure rather than throwing, so callers
+    // can uniformly treat "couldn't check" the same as "nothing changed".
+    async function _fetchCollectionJson() {
+      try {
+        const res = await fetch(_collectionConfigUrl(), { headers: _authHeaders(), cache: 'no-store' });
+        if (!res.ok) return null;
+        return await res.json();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Re-reads collection.json fresh from the bucket and resolves the five
+    // flag values through resolveCollectionFlags(), so a flag flipped from
+    // another device reaches a client that already has the app open. Falls
+    // back to whatever `config` currently holds on any offline, HTTP, or
+    // parse failure, so a failed check can never break the action the user
+    // just took.
+    async function fetchFreshCollectionFlags() {
+      const json = await _fetchCollectionJson();
+      if (!json) {
+        return {
+          festival_mode:              config.festival_mode,
+          disable_gallery:            config.disable_gallery,
+          disable_gallery_statement:  config.disable_gallery_statement,
+          disable_publish:            config.disable_publish,
+          disable_publish_statement:  config.disable_publish_statement
+        };
+      }
+      return resolveCollectionFlags(json);
+    }
+
+    // Re-fetches collection.json in the background every time the home screen
+    // is reached (see showScreen()) so a flag changed elsewhere — another
+    // device, or this same admin's last save — is picked up without needing a
+    // full reload. Never awaited by its caller and never surfaces an error:
+    // on failure it silently leaves `config` as-is, per fetchFreshCollectionFlags
+    // above. Only touches `config`/localStorage when something actually
+    // changed, so a healthy no-op round trip doesn't bump lastUsed for nothing.
+    async function _refreshCollectionConfigInBackground() {
+      const json = await _fetchCollectionJson();
+      if (!json) return;
+      const flags = resolveCollectionFlags(json);
+      const changed = COLLECTION_FLAG_KEYS.some(k => config[k] !== flags[k]);
+      if (!changed) return;
+      config = Object.assign({}, config, flags);
+      _rawFlagStatements = {
+        disable_gallery_statement: _rawStatementOrBlank(json, 'disable_gallery_statement'),
+        disable_publish_statement: _rawStatementOrBlank(json, 'disable_publish_statement')
+      };
+      _upsertKnownCollection(_runtimeConfig.bucket, config);
     }
 
     async function checkAssetEtags() {
@@ -2132,13 +3727,26 @@
 
     document.getElementById('loadingRetryBtn').addEventListener('click', startAssetLoad);
 
+    function applyAdminMode() {
+      document.body.classList.add('admin-active');
+      document.querySelector('.app-name').textContent = '(K)admin';
+      document.getElementById('createBtn').style.display = 'none';
+      document.getElementById('cardList').style.display = 'none';
+      document.getElementById('kuenstlernameBar').style.display = 'none';
+      document.getElementById('deletedGalleryBtn').style.display = '';
+      document.getElementById('adminSettingsBtn').style.display = '';
+      document.getElementById('cardViewDownloadBtn').style.display = 'none';
+      document.getElementById('cardViewDeleteBtn').style.display = '';
+    }
+
     // ── Runtime config resolution ──
     (function () {
-      const _CONFIG_KEY = 'kartomat_cfg';
+      const _CONFIG_KEY = ACTIVE_CONFIG_KEY;
       const params = new URLSearchParams(location.search);
       const qUrl = params.get('url');
       const qKey = params.get('key');
       const qBucket = params.get('bucket');
+      const qAdminKey = params.get('adminkey');
 
       function showConfigError(msg) {
         const el = document.getElementById('nocfgMsg');
@@ -2177,6 +3785,23 @@
             if (cfg && cfg.url && cfg.key && cfg.bucket) _runtimeConfig = cfg;
           }
         } catch (e) {}
+      }
+
+      if (qAdminKey !== null) {
+        _adminState.enter(qAdminKey);
+        if (qUrl === null && qKey === null && qBucket === null) {
+          history.replaceState(null, '', location.pathname);
+        }
+      }
+
+      // The persisted flag alone decides whether admin mode is applied — an
+      // admin-key parameter above already sets it, but on every other start
+      // (including after a collection switch, which reloads) this is the
+      // only thing consulted.
+      if (_adminState.isActive()) {
+        _adminMode = true;
+        _adminKey = _adminState.key();
+        applyAdminMode();
       }
 
       if (_runtimeConfig) {
