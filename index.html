@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="6371f24914b0">
+  <meta name="build-version" content="bacf452946db">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -83,6 +83,8 @@
       letter-spacing: .03em;
       line-height: 1;
       margin-bottom: 20px;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .app-tagline {
@@ -91,6 +93,7 @@
       line-height: 1.55;
       max-width: 300px;
       margin-bottom: 8px;
+      white-space: pre-line;
     }
 
     .btn-primary {
@@ -2776,7 +2779,7 @@
 
     const COLLECTION_CONFIG_DEFAULTS = {
       title:       'hummelrummel',
-      description: 'Erstelle deine eigene Festivalkarte — schön, schnell, auf deinem Handy.',
+      description: 'Erstelle deine eigene Sammelkarte.\nDie besten werden beim nächsten Festival real.',
       name:        'Hummelrummel',
       policy:      'Seid rücksichtsvoll.\nAndere Personen sehen deine Karte.\nkein Sexismus, kein Rassismus, keine Homophobie.'
     };
