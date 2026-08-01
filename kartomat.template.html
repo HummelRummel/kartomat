@@ -673,13 +673,6 @@
       gap: 8px;
     }
     #deletePanel[hidden] { display: none; }
-    .delete-panel-title {
-      font-family: 'Nove', system-ui, sans-serif;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      margin: 0;
-    }
     .delete-panel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
     /* ── Not configured ── */
@@ -980,10 +973,9 @@
   <div id="cardView" class="screen">
     <header class="gallery-header">
       <button class="btn-action" id="cardViewDownloadBtn">Herunterladen</button>
-      <button class="btn-action" id="cardViewDeleteBtn" style="display:none">Bild löschen und Benutzer sperren</button>
+      <button class="btn-action" id="cardViewDeleteBtn" style="display:none">Löschen und/oder sperren</button>
     </header>
     <div id="deletePanel" hidden>
-      <p class="delete-panel-title">Karte löschen</p>
       <div class="delete-panel-actions">
         <button class="btn-action" id="deleteLockBtn">Löschen &amp; sperren</button>
         <button class="btn-action" id="deleteOnlyBtn">Nur löschen</button>
@@ -2311,6 +2303,7 @@
       _deletePanelUuid = null;
       _deletePanelCreatorId = null;
       document.getElementById('deletePanel').setAttribute('hidden', '');
+      if (_adminMode) document.getElementById('cardViewDeleteBtn').style.display = '';
     }
 
     function revokeDeletedGalleryUrls() {
@@ -2584,6 +2577,7 @@
       lockBtn.textContent = 'Löschen & sperren';
       lockBtn.disabled = true;
       onlyBtn.disabled = false;
+      document.getElementById('cardViewDeleteBtn').style.display = 'none';
       document.getElementById('deletePanel').removeAttribute('hidden');
 
       let creatorId = null;
@@ -2654,6 +2648,7 @@
 
     document.getElementById('deleteCancelBtn').addEventListener('click', () => {
       document.getElementById('deletePanel').setAttribute('hidden', '');
+      document.getElementById('cardViewDeleteBtn').style.display = '';
       _deletePanelUuid = null;
       _deletePanelCreatorId = null;
     });
