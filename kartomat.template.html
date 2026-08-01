@@ -911,6 +911,7 @@
     .publish-banner-actions { display: flex; gap: 8px; }
     .publish-banner.locked { border-left-color: #e85d4c; }
     .publish-banner.noconn { border-left-color: #b08a3e; }
+    .publish-banner.foreign { border-left-color: #7b8fa6; }
 
     /* ── Install banner ── */
 
@@ -1660,6 +1661,33 @@
         retryBtn.textContent = 'Erneut versuchen';
         retryBtn.addEventListener('click', () => { resetPublishBanner(); runPublishCheck(); });
         actionsEl.appendChild(retryBtn);
+      } else if (type === 'foreignPublish' || type === 'foreignSave') {
+        bannerEl.classList.add('foreign');
+        const fromName = _collectionDisplayName(state.cardBucket);
+        const toName   = _collectionDisplayName(_runtimeConfig.bucket);
+        const verb     = type === 'foreignPublish' ? 'Veröffentlichen' : 'Speichern';
+        titleEl.textContent = 'Andere Sammlung.';
+        bodyEl.textContent =
+          `Diese Karte gehört zu „${fromName}“, du bist gerade in „${toName}“.\n` +
+          `Beim ${verb} wird eine neue Karte in „${toName}“ angelegt. Die Karte in „${fromName}“ bleibt erhalten.`;
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className   = 'btn-action btn-action-primary';
+        confirmBtn.style.flex  = '1';
+        confirmBtn.textContent = verb;
+        confirmBtn.addEventListener('click', () => {
+          resetPublishBanner();
+          if (type === 'foreignPublish') runNameGate();
+          else saveCard();
+        });
+
+        const dismissBtn = document.createElement('button');
+        dismissBtn.className   = 'btn-action';
+        dismissBtn.textContent = 'Doch nicht';
+        dismissBtn.addEventListener('click', () => { resetPublishBanner(); updatePublishBtn(); });
+
+        actionsEl.appendChild(confirmBtn);
+        actionsEl.appendChild(dismissBtn);
       }
 
       bannerEl.removeAttribute('hidden');
@@ -1671,8 +1699,15 @@
     // Veröffentlichen carries the user through the whole chain.
 
     function startPublishFlow() {
-      // Insertion point: the wrong-collection confirm (separate slice) becomes
-      // the first step here, ahead of the name gate.
+      runForeignGuard();
+    }
+
+    function runForeignGuard() {
+      const isForeign = state.cardBucket !== null && state.cardBucket !== _runtimeConfig.bucket;
+      if (isForeign) {
+        showPublishBanner('foreignPublish');
+        return;
+      }
       runNameGate();
     }
 
@@ -2299,8 +2334,7 @@
         const isForeign = c.bucket !== _runtimeConfig?.bucket;
         let badge;
         if (isForeign) {
-          const known = c.bucket ? _getKnownCollection(c.bucket) : null;
-          const label = (known && known.name) || c.bucket || 'Unbekannt';
+          const label = _collectionDisplayName(c.bucket);
           badge = `<span class="badge-foreign">${escapeHtml(label)}</span>`;
         } else {
           badge = '<span class="badge-draft">Entwurf</span>';
@@ -2880,7 +2914,12 @@
     });
     document.getElementById('saveBtn').addEventListener('click', () => {
       const isForeign = state.cardBucket !== null && state.cardBucket !== _runtimeConfig.bucket;
-      const needsConfirm = state.currentId !== null && !isForeign;
+      if (isForeign) {
+        resetPublishBanner();
+        showPublishBanner('foreignSave');
+        return;
+      }
+      const needsConfirm = state.currentId !== null;
       if (needsConfirm) {
         twoTapControl.tap(document.getElementById('saveBtn'), 'Wirklich?', saveCard);
       } else {
@@ -2924,6 +2963,11 @@
 
     function _getKnownCollection(bucket) {
       return _loadKnownCollections()[bucket] || null;
+    }
+
+    function _collectionDisplayName(bucket) {
+      const known = bucket ? _getKnownCollection(bucket) : null;
+      return (known && known.name) || bucket || 'Unbekannt';
     }
 
     function _upsertKnownCollection(bucket, cfg) {
