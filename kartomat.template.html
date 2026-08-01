@@ -71,6 +71,12 @@
       font-size: 15px;
       line-height: 1.55;
       max-width: 300px;
+      margin-bottom: 8px;
+    }
+
+    .home-name {
+      color: var(--muted);
+      font-size: 13px;
       margin-bottom: 52px;
     }
 
@@ -903,9 +909,10 @@
 
   <!-- ── Home ── -->
   <div id="home" class="screen">
-    <div class="slash-accent" id="homeEvent"></div>
+    <div class="slash-accent" id="homeTitle"></div>
     <h1 class="app-name">(K)artomat</h1>
-    <p class="app-tagline" id="homeTagline"></p>
+    <p class="app-tagline" id="homeDescription"></p>
+    <p class="home-name" id="homeName"></p>
     <div class="home-actions">
       <button class="btn-action" id="galleryBtn">Galerie</button>
       <button class="btn-action" id="deletedGalleryBtn" style="display:none">Gelöschte Galerie</button>
@@ -1089,11 +1096,14 @@
       desc: '',
       photo: null,
       currentId: null,
-      cardEvent: null,
+      cardBucket: null,
       publishedAt: null,
       publishedFingerprint: null,
       dirty: false
     };
+
+    // ── One-time cleanup of the removed text-config keys ──
+    ['event', 'tagline', 'policy', 'bucket'].forEach(k => localStorage.removeItem('kartomat:' + k));
 
     // ── Anonymous per-device identity ──
 
@@ -1531,7 +1541,7 @@
           state.desc = '';
           state.photo = dataURL;
           state.currentId = null;
-          state.cardEvent = null;
+          state.cardBucket = null;
           state.publishedAt = null;
           state.publishedFingerprint = null;
           zoomSlider.value = 1;
@@ -1979,10 +1989,10 @@
     }
 
     async function persistCard(fullCanvas) {
-      const isForeign = state.cardEvent !== null && state.cardEvent !== config.event;
+      const isForeign = state.cardBucket !== null && state.cardBucket !== _runtimeConfig.bucket;
       if (isForeign) {
         state.currentId = crypto.randomUUID();
-        state.cardEvent = config.event;
+        state.cardBucket = _runtimeConfig.bucket;
         state.publishedAt = null;
         state.publishedFingerprint = null;
       } else if (!state.currentId) {
@@ -1991,7 +2001,7 @@
       const thumbnail = await buildThumbnail(fullCanvas);
       await cardStore.put({
         id:          state.currentId,
-        event:       config.event,
+        bucket:      _runtimeConfig.bucket,
         title:       state.title,
         desc:        state.desc,
         photo:       state.photo,
@@ -2034,8 +2044,8 @@
       let cards;
       try { cards = await cardStore.list(); } catch { cards = []; }
       cards.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
-      const ownCards = cards.filter(c => !c.event || c.event === config.event);
-      const foreignCards = cards.filter(c => c.event && c.event !== config.event);
+      const ownCards = cards.filter(c => c.bucket === _runtimeConfig?.bucket);
+      const foreignCards = cards.filter(c => c.bucket !== _runtimeConfig?.bucket);
       const sortedCards = [...ownCards, ...foreignCards];
 
       if (!cards.length) {
@@ -2046,10 +2056,10 @@
 
       homeEl.classList.add('has-list');
       listEl.innerHTML = sortedCards.map(c => {
-        const isForeign = c.event && c.event !== config.event;
+        const isForeign = c.bucket !== _runtimeConfig?.bucket;
         let badge;
         if (isForeign) {
-          badge = `<span class="badge-foreign">${escapeHtml(c.event)}</span>`;
+          badge = `<span class="badge-foreign">${escapeHtml(c.bucket || 'Unbekannt')}</span>`;
         } else {
           badge = '<span class="badge-draft">Entwurf</span>';
           if (c.publishedFingerprint) {
@@ -2123,7 +2133,7 @@
       state.offsetYFrac = record.offsetYFrac ?? null;
       state.publishedAt          = record.publishedAt          ?? null;
       state.publishedFingerprint = record.publishedFingerprint ?? null;
-      state.cardEvent            = record.event                ?? null;
+      state.cardBucket           = record.bucket               ?? null;
 
       if (previewImgEl) { previewImgEl.remove(); previewImgEl = null; }
 
@@ -2624,7 +2634,7 @@
       if (e.target === photoChooser) closeChooser();
     });
     document.getElementById('saveBtn').addEventListener('click', () => {
-      const isForeign = state.cardEvent !== null && state.cardEvent !== config.event;
+      const isForeign = state.cardBucket !== null && state.cardBucket !== _runtimeConfig.bucket;
       const needsConfirm = state.currentId !== null && !isForeign;
       if (needsConfirm) {
         twoTapControl.tap(document.getElementById('saveBtn'), 'Wirklich?', saveCard);
@@ -2640,31 +2650,15 @@
 
     renderHomeList();
 
-    // ── App config (bucket / event / tagline) ──
-    const config = (() => {
-      const DEFAULTS = {
-        bucket:  '3600grad-karten-upload-hummelrummel',
-        event:   'hummelrummel',
-        tagline: 'Erstelle deine eigene Festivalkarte — schön, schnell, auf deinem Handy.',
-        policy:  'Seid rücksichtsvoll.\nAndere Personen sehen deine Karte.\nkein Sexismus, kein Rassismus, keine Homophobie.'
-      };
-      const params = new URLSearchParams(location.search);
-      const out = {};
-      for (const key of Object.keys(DEFAULTS)) {
-        const param = params.get(key);
-        if (param !== null) {
-          localStorage.setItem('kartomat:' + key, param);
-          out[key] = param;
-        } else {
-          const stored = localStorage.getItem('kartomat:' + key);
-          out[key] = stored !== null ? stored : DEFAULTS[key];
-        }
-      }
-      return out;
-    })();
+    // ── Collection configuration (collection.json) ──
+    let config = null;
 
-    document.getElementById('homeEvent').textContent  = config.event;
-    document.getElementById('homeTagline').textContent = config.tagline;
+    const COLLECTION_CONFIG_DEFAULTS = {
+      title:       'hummelrummel',
+      description: 'Erstelle deine eigene Festivalkarte — schön, schnell, auf deinem Handy.',
+      name:        'Hummelrummel',
+      policy:      'Seid rücksichtsvoll.\nAndere Personen sehen deine Karte.\nkein Sexismus, kein Rassismus, keine Homophobie.'
+    };
 
     // ── Asset loading ──
 
@@ -2678,6 +2672,11 @@
     function _assetBase() {
       return _runtimeConfig.url + '/storage/v1/object/authenticated/' + _runtimeConfig.bucket + '/assets';
     }
+    // collection.json lives at the bucket root rather than under assets/, so it
+    // falls outside the service worker's cache-first rule and is always network-fresh.
+    function _collectionConfigUrl() {
+      return _runtimeConfig.url + '/storage/v1/object/authenticated/' + _runtimeConfig.bucket + '/collection.json';
+    }
     function _authHeaders(extra) {
       return Object.assign({
         apikey: _runtimeConfig.key,
@@ -2689,15 +2688,27 @@
       const base = _assetBase();
       const bgUrl = base + '/background.jpeg';
       const fontUrl = base + '/Nove.woff2';
-      const [bgRes, fontRes] = await Promise.all([
+      const configUrl = _collectionConfigUrl();
+      const [bgRes, fontRes, configRes] = await Promise.all([
         fetch(bgUrl, { headers: _authHeaders() }),
-        fetch(fontUrl, { headers: _authHeaders() })
+        fetch(fontUrl, { headers: _authHeaders() }),
+        fetch(configUrl, { headers: _authHeaders() })
       ]);
       if (!bgRes.ok) throw new Error('background.jpeg: HTTP ' + bgRes.status);
       if (!fontRes.ok) throw new Error('Nove.woff2: HTTP ' + fontRes.status);
+      if (!configRes.ok) throw new Error('collection.json: HTTP ' + configRes.status);
       _saveEtag(bgUrl, bgRes);
       _saveEtag(fontUrl, fontRes);
-      const [bgBlob, fontBlob] = await Promise.all([bgRes.blob(), fontRes.blob()]);
+      const [bgBlob, fontBlob, collectionJson] = await Promise.all([bgRes.blob(), fontRes.blob(), configRes.json()]);
+      config = {
+        title:       collectionJson.title       ?? COLLECTION_CONFIG_DEFAULTS.title,
+        description: collectionJson.description ?? COLLECTION_CONFIG_DEFAULTS.description,
+        name:        collectionJson.name        ?? COLLECTION_CONFIG_DEFAULTS.name,
+        policy:      collectionJson.policy      ?? COLLECTION_CONFIG_DEFAULTS.policy
+      };
+      document.getElementById('homeTitle').textContent       = config.title;
+      document.getElementById('homeDescription').textContent = config.description;
+      document.getElementById('homeName').textContent        = config.name;
       const fontBlobUrl = URL.createObjectURL(fontBlob);
       const face = new FontFace('Nove', 'url(' + fontBlobUrl + ')', { weight: '700', style: 'normal' });
       await face.load();
