@@ -1352,7 +1352,7 @@
       _currentScreen = id;
       twoTapControl.reset();
       resetPublishBanner();
-      if (id === 'home') { renderHomeList(); _galleryLoaded = false; }
+      if (id === 'home') { renderHomeList(); _galleryLoaded = false; _refreshCollectionConfigInBackground(); }
       if (id === 'home') _installCtrl.markEngaged();
       if (id === 'gallery') {
         if (returningToGallery && _galleryLoaded) {
@@ -3630,19 +3630,28 @@
       document.getElementById('cardFull').style.backgroundImage = 'url("' + _bgObjectUrl + '")';
     }
 
+    // Fetches and parses collection.json fresh from the bucket. Returns null
+    // on any offline, HTTP, or parse failure rather than throwing, so callers
+    // can uniformly treat "couldn't check" the same as "nothing changed".
+    async function _fetchCollectionJson() {
+      try {
+        const res = await fetch(_collectionConfigUrl(), { headers: _authHeaders() });
+        if (!res.ok) return null;
+        return await res.json();
+      } catch (e) {
+        return null;
+      }
+    }
+
     // Re-reads collection.json fresh from the bucket and resolves the five
     // flag values through resolveCollectionFlags(), so a flag flipped from
     // another device reaches a client that already has the app open. Falls
-    // back to the startup-loaded values in `config` — never mutated after
-    // loadAssets() — on any offline, HTTP, or parse failure, so a failed
-    // check can never break the action the user just took.
+    // back to whatever `config` currently holds on any offline, HTTP, or
+    // parse failure, so a failed check can never break the action the user
+    // just took.
     async function fetchFreshCollectionFlags() {
-      try {
-        const res = await fetch(_collectionConfigUrl(), { headers: _authHeaders() });
-        if (!res.ok) throw new Error('collection.json: HTTP ' + res.status);
-        const json = await res.json();
-        return resolveCollectionFlags(json);
-      } catch (e) {
+      const json = await _fetchCollectionJson();
+      if (!json) {
         return {
           festival_mode:              config.festival_mode,
           disable_gallery:            config.disable_gallery,
@@ -3651,6 +3660,28 @@
           disable_publish_statement:  config.disable_publish_statement
         };
       }
+      return resolveCollectionFlags(json);
+    }
+
+    // Re-fetches collection.json in the background every time the home screen
+    // is reached (see showScreen()) so a flag changed elsewhere — another
+    // device, or this same admin's last save — is picked up without needing a
+    // full reload. Never awaited by its caller and never surfaces an error:
+    // on failure it silently leaves `config` as-is, per fetchFreshCollectionFlags
+    // above. Only touches `config`/localStorage when something actually
+    // changed, so a healthy no-op round trip doesn't bump lastUsed for nothing.
+    async function _refreshCollectionConfigInBackground() {
+      const json = await _fetchCollectionJson();
+      if (!json) return;
+      const flags = resolveCollectionFlags(json);
+      const changed = COLLECTION_FLAG_KEYS.some(k => config[k] !== flags[k]);
+      if (!changed) return;
+      config = Object.assign({}, config, flags);
+      _rawFlagStatements = {
+        disable_gallery_statement: _rawStatementOrBlank(json, 'disable_gallery_statement'),
+        disable_publish_statement: _rawStatementOrBlank(json, 'disable_publish_statement')
+      };
+      _upsertKnownCollection(_runtimeConfig.bucket, config);
     }
 
     async function checkAssetEtags() {
