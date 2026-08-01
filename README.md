@@ -86,6 +86,21 @@ All fields are optional; each falls back to a built-in default when omitted:
 | `name` | Short display name used in the [collection switcher](#flow) and on foreign-card badges. |
 | `policy` | Publish content-policy text (previously the `?policy=` parameter). First line renders as the bold banner title, remaining lines as the muted body. |
 
+**Example** (also in [`collection.json`](collection.json) at the repo root):
+
+```json
+{
+  "title": "/// 3026grad festival",
+  "description": "Erstelle deine eigene Festivalkarte — schön, schnell, auf deinem Handy.",
+  "name": "3026grad",
+  "policy": "Seid rücksichtsvoll.\nAndere Personen sehen deine Karte.\nKein Sexismus, kein Rassismus, keine Homophobie."
+}
+```
+
+Line breaks in `policy` are JSON `\n` escapes inside the single string — the first line ("Seid
+rücksichtsvoll.") becomes the banner title, the remaining two the body. Any field may be dropped to
+take the built-in default; an empty `{}` is valid and yields the defaults for all four.
+
 **Failure handling:**
 - File missing or unreadable (404/403) — **fatal**: the app stops at the loading-error screen. A
   bucket that is reachable but cannot serve the file is treated as misconfigured.
