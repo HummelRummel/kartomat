@@ -85,7 +85,7 @@ All fields are optional; each falls back to a built-in default when omitted:
 |---|---|---|
 | `title` | Home-screen top line, and the home screen's collection picker (previously the `?event=` parameter). | built-in headline |
 | `description` | The line under the app name (previously the `?tagline=` parameter). | built-in description |
-| `name` | Short display name shown in the [per-screen collection bar](#flow), the [collection switcher](#flow), and on foreign-card badges. | built-in collection name |
+| `name` | Short display name shown in the [per-screen collection bar](#flow) and the [collection switcher](#flow). | built-in collection name |
 | `policy` | Publish content-policy text (previously the `?policy=` parameter). First line renders as the bold banner title, remaining lines as the muted body. | built-in policy text |
 | `festival_mode` | When `true` (and the user is not an admin), non-admin gallery tiles become inert — no pointer cursor, no click handler, no full-size JPEG fetched on tap. See [Flow](#flow). | `false` |
 | `disable_gallery` | When `true` (and the user is not an admin), tapping **Galerie** opens a statement sheet instead of navigating. See [Flow](#flow). | `false` |
@@ -146,16 +146,23 @@ writes it as the active config and reloads the page into it. Below the title, a 
 description are sourced from `collection.json`, followed by a secondary **Galerie** button and the
 primary **Karte erstellen** button (Galerie is placed above Karte erstellen, in outlined style so
 creating remains the primary call-to-action). There is no separate collection control below the
-description — the title is the only picker. Below the buttons, cards appear as thumbnails. Own cards (belonging to the
-current bucket) are listed first; foreign cards (from other buckets) appear below. Publish tags apply
-to own cards:
+description — the title is the only picker. Below the buttons, cards appear as thumbnails, scoped to
+the active collection: only cards whose `bucket` matches it are listed, most-recently-edited first (see
+the `bucket` field in [Local storage](#local-storage)). Cards saved in other collections are hidden, not
+deleted — their records stay on the device untouched and reappear complete, same thumbnail, same badge,
+the moment that collection is selected again. A collection holding none of the device's cards falls back
+to this same centred layout (title, description, Galerie, Karte erstellen) with no special empty-state
+copy. Publish tags:
 - **Veröffentlicht** — card is published and unchanged since publish.
 - **Veröffentlicht (alt)** — card was published but has been edited since.
 - **Entwurf** — card has never been published.
 
-Foreign cards show the originating collection's display name in place of the publish tag — falling
-back to the raw bucket name, or "Unbekannt" for records with no bucket at all — and their thumbnail is
-shown at 50% opacity.
+**Unreachable, kept in the code:** the own/foreign split, the foreign badge (the originating
+collection's display name shown in place of the publish tag, falling back to the raw bucket name or
+"Unbekannt") and the 50%-opacity foreign thumbnail. With the list scoped as above, no card in it is ever
+foreign, so this code never runs. It stays because removing it would touch the publish flow more
+broadly for no behavioural gain — see the [wrong-collection guard](#flow) note below, which is unreachable
+for the same reason.
 
 Below the card list, a slim tappable **Künstlername line** — styled on the collection bar — shows the
 device's Künstlername (uppercased), or "Künstlername festlegen" when none is set. Tapping it opens the
@@ -244,10 +251,10 @@ coloured left stripe is the only variant marker. Four outcomes:
 Veröffentlichen stays tappable throughout — including with `disable_publish` on — since the banner is
 the only way the statement reaches the user.
 
-**Two-tap confirm** — Zurück uses this pattern when there are unsaved changes (relabels to "Änderungen verwerfen?"). Speichern is two-tap (relabels to "Wirklich?") only when overwriting an already-saved own card; a brand-new card is single-tap. Saving or publishing a card that belongs to another collection is no longer a silent single-tap fork — both now show the wrong-collection confirm banner first (see above), naming the collection the card came from and the one it is about to enter. Herunterladen is always single-tap.
+**Two-tap confirm** — Zurück uses this pattern when there are unsaved changes (relabels to "Änderungen verwerfen?"). Speichern is two-tap (relabels to "Wirklich?") only when overwriting an already-saved own card; a brand-new card is single-tap. Herunterladen is always single-tap. (An editor session can no longer hold a foreign card — see the [wrong-collection guard](#flow) note below — so the wrong-collection confirm banner it would otherwise show ahead of Speichern is unreachable.)
 
 **Delete flow** — The trash button (🗑) on each home-list card branches on ownership and publish state:
-- **Foreign card** — single "delete locally" confirmation banner, then removes the local record only; the original in its own collection's cloud storage is untouched.
+- **Foreign card** — single "delete locally" confirmation banner, then removes the local record only; the original in its own collection's cloud storage is untouched. **Unreachable** — the home list only ever lists own cards (see above), so this branch never fires; kept for the same reason as the rest of the foreign-card machinery.
 - **Own unpublished card** — single "delete locally" confirmation banner, then removes the local record.
 - **Own published card** — reveals two choices: **Lokal** and **Online**.
   - **Online** — confirmation banner, then deletes the three UUID-derived Supabase Storage files first; only removes the local record if the online delete succeeds. If the online delete fails, the card is kept and an error banner invites retry.
@@ -255,15 +262,18 @@ the only way the statement reaches the user.
 
 Inactivity auto-dismisses the revealed buttons and banners; tapping elsewhere cancels the flow.
 
-**Wrong-collection guard** — A card carried over from another collection forks into the active one the
-moment it is saved or published: a new `id` is minted, `bucket` is re-stamped, and publish state is
-cleared (see the `bucket` field in [Local storage](#local-storage)). Saving or publishing such a card
-now asks first, via a variant of the publish banner (bottom-anchored, coloured left stripe) that names
-both the collection the card came from and the one it is about to enter. Confirming forks exactly as
-before; declining leaves the card untouched and costs no network request. Collection display names
-resolve through the known-collections registry, falling back to the raw bucket name and then to
-"Unbekannt" for records with no bucket at all — the same chain the home screen's foreign-card badge
-uses.
+**Wrong-collection guard (unreachable)** — Saving or publishing a card carried over from another
+collection would show a confirm banner first (bottom-anchored, coloured left stripe) naming both the
+collection the card came from and the one it is about to enter; confirming would fork the card into the
+active one — a new `id` minted, `bucket` re-stamped, publish state cleared (see the `bucket` field in
+[Local storage](#local-storage)) — and declining would leave it untouched. None of this can trigger any
+more: the home list is the only way a card ever reached the editor, it now only ever surfaces cards from
+the active collection, and the editor's own collection bar is permanently non-tappable, so a card can't
+change collections mid-edit either. The guard and the fork it guards stay in the code rather than being
+removed — stripping the fork would leave a future foreign record (should one ever reach the editor
+again) silently overwritten in place under the wrong collection, a worse failure mode than dead code, and
+removing just the guard while leaving the fork would restore the silent behaviour this guard exists to
+prevent.
 
 ## Local storage
 
@@ -272,7 +282,7 @@ Cards are stored in **IndexedDB** (database name `kartomat`) via the `cardStore`
 | Field | Description |
 |---|---|
 | `id` | Stable UUID assigned at first save |
-| `bucket` | Bucket name stamped at persist time; a card is "foreign" when this differs from the active bucket. Records predating this change carry no `bucket` and are therefore always foreign. |
+| `bucket` | Bucket name stamped at persist time. The home list only lists cards whose `bucket` matches the active collection (see [Flow](#flow)); every record has one, either stamped on save or, for records predating this field, by the schema-upgrade migration below. |
 | `title`, `desc` | Card text |
 | `photo` | JPEG normalized to ≤ 1110 px height on import |
 | `userScale`, `offsetXFrac`, `offsetYFrac` | Pan/zoom state |
@@ -285,9 +295,17 @@ IndexedDB is used instead of localStorage because a single photo can exceed the 
 
 API: `list()`, `get(id)`, `put(record)`, `remove(id)`, `markPublished(id, fingerprint)`.
 
-Foreign cards fork into the current collection on save — a new `id`, `bucket` re-stamped to the
-active bucket, and publish state cleared — so this also doubles as the migration path for records
-predating the `bucket` field.
+**Schema and legacy adoption** — the IndexedDB schema is at version `2`. Upgrading from version `1` walks
+every existing record once with a cursor, inside that version-change transaction, and stamps
+`bucket = '3600grad-karten-upload-hummelrummel'` on any record that has none — the exact, single
+built-in default the pre-collection release served, paired with the legacy `event: 'hummelrummel'` field
+it wrote on every record (left in place; nothing reads it, and removing it buys nothing). Records that
+already carry a `bucket` are left byte-for-byte unchanged, so the walk can never relabel a card that
+already belongs to a collection. A fresh install creates an empty store and skips the walk entirely.
+Because the walk runs inside the version-change transaction, an interrupted launch simply leaves the
+store at version `1` and the migration runs again on the next launch — idempotent either way, since a
+stamped record no longer matches the condition. It is silent: no screen, no banner, no user-visible
+step — a migrated card just appears as an ordinary own card once its collection is selected.
 
 ### localStorage keys
 
@@ -403,10 +421,10 @@ The font (`Nove.woff2`) and background image (`background.jpeg`) are fetched at 
 Use the anon key (not the service-role key) in the configuration link.
 
 **Before this reaches existing users:** every bucket already in use must get `collection.json` and its
-root SELECT policy — without both, the app stops working for that bucket entirely. Also expect every
-locally-saved card on a returning device to render as foreign afterwards: cards are now scoped by
-bucket rather than the old event identifier, and no backfill is performed. Editing and saving a
-foreign card forks it into the current collection.
+root SELECT policy — without both, the app stops working for that bucket entirely. Locally-saved cards
+from before collection tracking are adopted automatically, on first launch after the update, into the
+one collection the pre-update release served — see the schema-upgrade note under
+[Local storage](#local-storage) — so no manual backfill is needed here.
 
 **Migration warning:** the root INSERT/UPDATE policy (item 7) is a new requirement — every bucket
 already in production must have it added before its admin can toggle any of the collection flags from
