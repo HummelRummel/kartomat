@@ -2306,8 +2306,9 @@
     // ── cardStore (IndexedDB) ──
 
     const cardStore = (() => {
-      const DB_VER  = 1;
+      const DB_VER  = 2;
       const STORE   = 'cards';
+      const LEGACY_BUCKET = '3600grad-karten-upload-hummelrummel';
 
       function open() {
         const dbName = 'kartomat';
@@ -2317,6 +2318,20 @@
             const db = e.target.result;
             if (!db.objectStoreNames.contains(STORE)) {
               db.createObjectStore(STORE, { keyPath: 'id' });
+            }
+            if (e.oldVersion === 1) {
+              const store = e.target.transaction.objectStore(STORE);
+              const cursorReq = store.openCursor();
+              cursorReq.onsuccess = ev => {
+                const cursor = ev.target.result;
+                if (!cursor) return;
+                const record = cursor.value;
+                if (!record.bucket) {
+                  record.bucket = LEGACY_BUCKET;
+                  cursor.update(record);
+                }
+                cursor.continue();
+              };
             }
           };
           req.onsuccess = e => resolve(e.target.result);
