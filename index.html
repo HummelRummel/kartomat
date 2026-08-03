@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="./manifest.json">
   <title>(K)ARTOMAT</title>
-  <meta name="build-version" content="57b6fa2a84ad">
+  <meta name="build-version" content="e06a25232d87">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2645,6 +2645,7 @@ if (typeof module !== 'undefined' && module.exports) {
       const listEl = document.getElementById('cardList');
       let cards;
       try { cards = await cardStore.list(); } catch { cards = []; }
+      cards = cards.filter(c => c.bucket === _runtimeConfig?.bucket);
       cards.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
       const ownCards = cards.filter(c => c.bucket === _runtimeConfig?.bucket);
       const foreignCards = cards.filter(c => c.bucket !== _runtimeConfig?.bucket);

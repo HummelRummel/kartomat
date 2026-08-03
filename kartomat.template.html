@@ -2474,6 +2474,7 @@
       const listEl = document.getElementById('cardList');
       let cards;
       try { cards = await cardStore.list(); } catch { cards = []; }
+      cards = cards.filter(c => c.bucket === _runtimeConfig?.bucket);
       cards.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
       const ownCards = cards.filter(c => c.bucket === _runtimeConfig?.bucket);
       const foreignCards = cards.filter(c => c.bucket !== _runtimeConfig?.bucket);
